@@ -12,13 +12,8 @@ import (
 // statusCmd represents the status command
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Display the status of the session described in the state file",
+	Long:  `Displays the saved state, giving the number frames requested, those already captured, and the remaining work.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if Debug || Verbosity >= 1 {
 			fmt.Println("Status command entered")
