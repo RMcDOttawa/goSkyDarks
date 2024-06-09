@@ -1,7 +1,7 @@
 ---
-verbosity:    5              # default 1
+verbosity:    3              # default 1
 debug: true
-stateFile:  "stateFile"     
+stateFile:  "./stateFile.state"
 cooling:
     useCooler:           true
     coolTo:              -10.0
