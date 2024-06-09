@@ -1,0 +1,38 @@
+---
+verbosity:    1               # default 1
+debug: true
+stateFile:  "stateFile"     
+cooling:
+    useCooler:           true
+    coolTo:              -10.0
+    coolStartTol:  2.0  
+    coolWaitMinutes:     30
+    abortOnCooling:      true
+    coolAbortTol:  2.0
+start:
+    delay:  true
+    day: today
+    time: 22:00
+server:
+   address: "localhost"       # default localhost
+   port:    3040              # default 3040
+biasframes:
+   -  biasset:
+        frames:  8
+        binning: 1
+   -  biasset:
+        frames:  8
+        binning: 2
+darkframes:
+  -  darkset:
+       frames:  8
+       seconds: 20
+       binning: 1
+  -  darkset:
+       frames:  8
+       seconds: 60
+       binning: 2
+  -  darkset:
+       frames:  18
+       seconds: 180
+       binning: 1

@@ -4,8 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -15,9 +13,9 @@ var resetCmd = &cobra.Command{
 	Short: "Reset state file so capture starts over",
 	Long:  `Remove the partially-completed information from the state file so the next "capture" command starts the entire calibration frame capture over from the beginning.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if Debug || Verbosity >= 1 {
-			fmt.Println("Reset command entered")
-		}
+		//if Debug || Verbosity >= 1 {
+		//	fmt.Println("Reset command entered")
+		//}
 	},
 }
 

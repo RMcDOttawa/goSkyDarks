@@ -4,8 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -15,9 +13,9 @@ var statusCmd = &cobra.Command{
 	Short: "Display the status of the session described in the state file",
 	Long:  `Displays the saved state, giving the number frames requested, those already captured, and the remaining work.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if Debug || Verbosity >= 1 {
-			fmt.Println("Status command entered")
-		}
+		//if Debug || Verbosity >= 1 {
+		//	fmt.Println("Status command entered")
+		//}
 	},
 }
 

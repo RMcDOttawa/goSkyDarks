@@ -2,7 +2,7 @@ package session
 
 import (
 	"fmt"
-	"goskydarks/specs"
+	"goskydarks/config"
 )
 
 // Session struct implements the session service, used for overall session control
@@ -14,7 +14,7 @@ func NewSession() (*Session, error) {
 	return &Session{}, nil
 }
 
-func (s *Session) PrepareForCapture(config specs.CaptureSpecs) error {
+func (s *Session) PrepareForCapture(config config.CaptureSpecs) error {
 	fmt.Printf("session.PrepareForCapture %#v\n", config)
 	return nil
 }
