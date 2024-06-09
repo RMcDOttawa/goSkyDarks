@@ -1,5 +1,10 @@
 package config
 
+import (
+	"errors"
+	"fmt"
+)
+
 type SettingsType struct {
 	Verbosity  int
 	Debug      bool
@@ -53,6 +58,8 @@ type DarkSet struct {
 	Binning int
 }
 
+// GetBiasSets retrieves the list of bias frames requested, converting them from the
+// awkward internal map format to a simple slice of BiasSet structs
 func (config *SettingsType) GetBiasSets() []BiasSet {
 	result := make([]BiasSet, 0, len(config.BiasFrames))
 	//fmt.Printf("ConvertBiasMap: %#v\n", theMap)
@@ -68,6 +75,8 @@ func (config *SettingsType) GetBiasSets() []BiasSet {
 	return result
 }
 
+// GetDarkSets retrieves the list of dark frames requested, converting them from the
+// awkward internal map format to a simple slice of DarkSet structs
 func (config *SettingsType) GetDarkSets() []DarkSet {
 	result := make([]DarkSet, 0, len(config.DarkFrames))
 	//fmt.Printf("ConvertBiasMap: %#v\n", theMap)
@@ -83,6 +92,15 @@ func (config *SettingsType) GetDarkSets() []DarkSet {
 		})
 	}
 	return result
+}
+
+// ValidateGlobals validates any global settings
+func (config *SettingsType) ValidateGlobals() error {
+	//	Verbosity must be between 0 and 5
+	if config.Verbosity < 0 || config.Verbosity > 5 {
+		return errors.New(fmt.Sprintf("invalid verbosity level (%d); must be between 0 and 5", config.Verbosity))
+	}
+	return nil
 }
 
 //// ParseStartTime Parses the start time string and returns whether we are delaying start, and to when

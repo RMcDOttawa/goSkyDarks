@@ -79,9 +79,13 @@ func init() {
 	if Settings.Debug || Settings.Verbosity > 1 {
 		fmt.Printf("Read configuration from file: %s\n", viper.ConfigFileUsed())
 	}
-	fmt.Printf("Settings now %#v\n", Settings)
 
-	if len(Settings.BiasFrames) > 0 {
+	if err := Settings.ValidateGlobals(); err != nil {
+		fmt.Println("Error validating global settings:", err)
+		os.Exit(1)
+	}
+
+	if Settings.Debug && len(Settings.BiasFrames) > 0 {
 		//fmt.Printf("\nBias Frames: %#v\n\n", config.Settings.BiasFrames)
 		biasList := Settings.GetBiasSets()
 		for i, bias := range biasList {
@@ -89,7 +93,7 @@ func init() {
 		}
 	}
 
-	if len(Settings.DarkFrames) > 0 {
+	if Settings.Debug && len(Settings.DarkFrames) > 0 {
 		//fmt.Printf("\nDark Frames: %#v\n\n", config.Settings.DarkFrames)
 		darkList := Settings.GetDarkSets()
 		for i, dark := range darkList {
