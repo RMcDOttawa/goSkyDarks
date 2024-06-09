@@ -17,8 +17,6 @@ type BiasSetMap map[string]int
 type DarkSetElementMap map[string]DarkSetMap
 type DarkSetMap map[string]int
 
-var Settings SettingsType
-
 // CoolingConfig is configuration about use the cameras cooler
 type CoolingConfig struct {
 	UseCooler       bool    //	Camera has cooler and we'll use it
@@ -55,10 +53,10 @@ type DarkSet struct {
 	Binning int
 }
 
-func ConvertBiasMap(theMap []BiasSetElementMap) []BiasSet {
-	result := make([]BiasSet, 0, len(theMap))
+func (config *SettingsType) GetBiasSets() []BiasSet {
+	result := make([]BiasSet, 0, len(config.BiasFrames))
 	//fmt.Printf("ConvertBiasMap: %#v\n", theMap)
-	for _, mapEl := range theMap {
+	for _, mapEl := range config.BiasFrames {
 		//fmt.Println("  Handling", key, mapEl)
 		frames := mapEl["biasset"]["frames"]
 		binning := mapEl["biasset"]["binning"]
@@ -70,10 +68,10 @@ func ConvertBiasMap(theMap []BiasSetElementMap) []BiasSet {
 	return result
 }
 
-func ConvertDarkMap(theMap []DarkSetElementMap) []DarkSet {
-	result := make([]DarkSet, 0, len(theMap))
+func (config *SettingsType) GetDarkSets() []DarkSet {
+	result := make([]DarkSet, 0, len(config.DarkFrames))
 	//fmt.Printf("ConvertBiasMap: %#v\n", theMap)
-	for _, mapEl := range theMap {
+	for _, mapEl := range config.DarkFrames {
 		//fmt.Println("  Handling", key, mapEl)
 		frames := mapEl["darkset"]["frames"]
 		seconds := mapEl["darkset"]["seconds"]

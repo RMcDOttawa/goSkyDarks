@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+var Settings *config.SettingsType
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "goskydarks",
@@ -34,28 +36,18 @@ calibration frames.`,
 	},
 }
 
-func validateGlobalConfig() error {
-	//	Verbosity: integer from 0 to 5
-	//verbosity := viper.GetInt("verbosity")
-	//if verbosity < 0 || verbosity > 5 {
-	//	return errors.New(fmt.Sprintf("%d is an invalid verbosity level (must be 0 to 5)", verbosity))
-	//}
+//func validateGlobalConfig() error {
+//	Verbosity: integer from 0 to 5
+//verbosity := viper.GetInt("verbosity")
+//if verbosity < 0 || verbosity > 5 {
+//	return errors.New(fmt.Sprintf("%d is an invalid verbosity level (must be 0 to 5)", verbosity))
+//}
 
-	//	Config file: empty string or path must exist
-	//	Config file not implemented yet
-	//configPath := viper.GetString("config")
-	//if configPath != "" {
-	//	_, err := os.Stat(configPath)
-	//	if err != nil {
-	//		return errors.New(fmt.Sprintf("config file \"%s\" does not exist", configPath))
-	//	}
-	//}
+//	State file: no validation - will depend on what we do with it and we'll
+//	detect any errors in path then
 
-	//	State file: no validation - will depend on what we do with it and we'll
-	//	detect any errors in path then
-
-	return nil
-}
+//return nil
+//}
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -69,6 +61,8 @@ func Execute() {
 func init() {
 	rootCmd.Root().CompletionOptions.DisableDefaultCmd = true
 
+	Settings = &config.SettingsType{}
+
 	//	Read config settings from config file
 	viper.SetConfigName("config")
 	viper.SetConfigType("yml")
@@ -77,25 +71,27 @@ func init() {
 		fmt.Println("Error reading config:", err)
 		os.Exit(1)
 	}
-	if err := viper.UnmarshalExact(&config.Settings); err != nil {
+	if err := viper.UnmarshalExact(Settings); err != nil {
 		fmt.Println("Unmarshal err:", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Read config file %#v\n", viper.ConfigFileUsed())
-	fmt.Printf("Settings now %#v\n", config.Settings)
+	if Settings.Debug || Settings.Verbosity > 1 {
+		fmt.Printf("Read configuration from file: %s\n", viper.ConfigFileUsed())
+	}
+	fmt.Printf("Settings now %#v\n", Settings)
 
-	if len(config.Settings.BiasFrames) > 0 {
+	if len(Settings.BiasFrames) > 0 {
 		//fmt.Printf("\nBias Frames: %#v\n\n", config.Settings.BiasFrames)
-		biasList := config.ConvertBiasMap(config.Settings.BiasFrames)
+		biasList := Settings.GetBiasSets()
 		for i, bias := range biasList {
 			fmt.Printf("Bias set %d: %d frames binned at %d\n", i, bias.Frames, bias.Binning)
 		}
 	}
 
-	if len(config.Settings.DarkFrames) > 0 {
+	if len(Settings.DarkFrames) > 0 {
 		//fmt.Printf("\nDark Frames: %#v\n\n", config.Settings.DarkFrames)
-		darkList := config.ConvertDarkMap(config.Settings.DarkFrames)
+		darkList := Settings.GetDarkSets()
 		for i, dark := range darkList {
 			fmt.Printf("Dark set %d: %d frames of %d seconds binned at %d\n",
 				i, dark.Frames, dark.Seconds, dark.Binning)
@@ -129,9 +125,9 @@ func init() {
 
 }
 
-func DisplayFlags() {
-	fmt.Println("All program config settings:")
-	for k, v := range viper.AllSettings() {
-		fmt.Printf("   %s: %v\n", k, v)
-	}
-}
+//func DisplayFlags() {
+//	fmt.Println("All program config settings:")
+//	for k, v := range viper.AllSettings() {
+//		fmt.Printf("   %s: %v\n", k, v)
+//	}
+//}
