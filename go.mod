@@ -3,6 +3,7 @@ module goskydarks
 go 1.22
 
 require (
+	github.com/golang/mock v1.6.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0

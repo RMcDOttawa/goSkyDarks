@@ -139,8 +139,10 @@ func (config *SettingsType) ParseStart() (bool, time.Time, error) {
 		tomorrow := today.AddDate(0, 0, 1)
 		config.Start.Day = tomorrow.Format("2006-01-02")
 	}
-	converted, err := time.Parse("2006-01-02 15:04",
-		config.Start.Day+" "+config.Start.Time)
+	converted, err := time.ParseInLocation(
+		"2006-01-02 15:04",
+		config.Start.Day+" "+config.Start.Time,
+		time.Local)
 	if err != nil {
 		return false, time.Time{}, err
 	}

@@ -85,22 +85,22 @@ func init() {
 		os.Exit(1)
 	}
 
-	if Settings.Debug && len(Settings.BiasFrames) > 0 {
-		//fmt.Printf("\nBias Frames: %#v\n\n", config.Settings.BiasFrames)
-		biasList := Settings.GetBiasSets()
-		for i, bias := range biasList {
-			fmt.Printf("Bias set %d: %d frames binned at %d\n", i, bias.Frames, bias.Binning)
-		}
-	}
-
-	if Settings.Debug && len(Settings.DarkFrames) > 0 {
-		//fmt.Printf("\nDark Frames: %#v\n\n", config.Settings.DarkFrames)
-		darkList := Settings.GetDarkSets()
-		for i, dark := range darkList {
-			fmt.Printf("Dark set %d: %d frames of %d seconds binned at %d\n",
-				i, dark.Frames, dark.Seconds, dark.Binning)
-		}
-	}
+	//if Settings.Debug && len(Settings.BiasFrames) > 0 {
+	//	//fmt.Printf("\nBias Frames: %#v\n\n", config.Settings.BiasFrames)
+	//	biasList := Settings.GetBiasSets()
+	//	for i, bias := range biasList {
+	//		fmt.Printf("Bias set %d: %d frames binned at %d\n", i, bias.Frames, bias.Binning)
+	//	}
+	//}
+	//
+	//if Settings.Debug && len(Settings.DarkFrames) > 0 {
+	//	//fmt.Printf("\nDark Frames: %#v\n\n", config.Settings.DarkFrames)
+	//	darkList := Settings.GetDarkSets()
+	//	for i, dark := range darkList {
+	//		fmt.Printf("Dark set %d: %d frames of %d seconds binned at %d\n",
+	//			i, dark.Frames, dark.Seconds, dark.Binning)
+	//	}
+	//}
 
 	//if len(config.Settings.DarkFrames) > 0 {
 	//	fmt.Printf("\nDark Frames: %#v\n\n", config.Settings.DarkFrames)

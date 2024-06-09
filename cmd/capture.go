@@ -4,7 +4,10 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
+	"goskydarks/session"
+	"os"
 )
 
 //var captureConfig config.CaptureSpecs
@@ -33,44 +36,51 @@ To delay the start until later, use --startat <day>,<time> or just --startat <ti
 <day> can be "today", "tomorrow", or a date in yyyy-mm-dd form
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		//captureConfig.SetServerAddress(localServerAddress)
-		//captureConfig.SetServerPort(localServerPort)
-		//captureConfig.SetUseCooler(localUseCooler)
-		//captureConfig.SetCoolTo(localCoolTo)
-		//captureConfig.SetCoolStartTol(localCoolStartTol)
-		//captureConfig.SetCoolWaitMinutes(localCoolWaitMinutes)
-		//captureConfig.SetCoolAbort(localCoolAbort)
-		//captureConfig.SetCoolAbortTol(localCoolAbortTol)
-		//captureConfig.SetStartAtString(localStartAtString)
-		//captureConfig.SetBiasStrings(*localBiasStrings)
-		//captureConfig.SetDarkStrings(*localDarkStrings)
-
-		//ValidateSettings(captureConfig)
-
-		//if Debug || Verbosity >= 1 {
-		//	fmt.Println("Capture command entered")
-		//	fmt.Println("Capture command entered")
-		//	if Debug || Verbosity >= 4 {
-		//		DisplayFlags()
-		//	}
-		//}
+		//	Get bias and dark frame specs
+		biasSets := Settings.GetBiasSets()
+		darkSets := Settings.GetDarkSets()
+		if len(biasSets) == 0 && len(darkSets) == 0 {
+			fmt.Println("Nothing to capture - specify bias or dark frames")
+			return
+		}
 
 		//	Create the capture session
-		//session, err := session.NewSession()
-		//if err != nil {
-		//	_, _ = fmt.Fprintln(os.Stderr, err)
-		//	return
-		//}
+		session, err := session.NewSession(*Settings)
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			return
+		}
 
-		//	get ready for capture by waiting for the start time (if requested)
-		//	and cooling the camera (if requested)
-		//err = session.PrepareForCapture(captureConfig)
-		//if err != nil {
-		//	_, _ = fmt.Fprintln(os.Stderr, err)
-		//	return
-		//}
+		//	Delay start
+		delay, targetTime, err := Settings.ParseStart()
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			return
+		}
+		if delay {
+			err = session.DelayStart(targetTime)
+			if err != nil {
+				_, _ = fmt.Fprintln(os.Stderr, err)
+				return
+			}
+		}
 
-		//	Do the captures until finished or aborted
+		//	Establish server connection
+		err = session.ConnectToServer(Settings.Server)
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			return
+		}
+
+		//	Cool the camera
+		err = session.CoolForStart(Settings.Cooling)
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			return
+		}
+
+		//	Do the captures until done, interrupted, or cooling aborts
+		err = session.CaptureFrames(biasSets, darkSets)
 
 	},
 }

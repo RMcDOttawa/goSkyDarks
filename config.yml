@@ -10,9 +10,9 @@ cooling:
     abortOnCooling:      true
     coolAbortTol:  2.0
 start:
-    delay:  true
+    delay:  false
     day: today
-    time: 22:00
+    time: 14:04
 server:
    address: "localhost"       # default localhost
    port:    3040              # default 3040
