@@ -165,3 +165,16 @@ func (s *Session) CaptureFrames(biasSets []config.BiasSet, darkSets []config.Dar
 	fmt.Printf("   Dark: %v\n", darkSets)
 	return nil
 }
+
+func (s *Session) StopCooling(cooling config.CoolingConfig) error {
+	if cooling.UseCooler && cooling.OffAtEnd {
+		if err := s.theSkyService.StopCooling(); err != nil {
+			fmt.Println("Error in Session StopCooling:", err)
+			return err
+		}
+		if s.settings.Verbosity > 1 || s.settings.Debug {
+			fmt.Printf("Cooling switched off at end of session")
+		}
+	}
+	return nil
+}

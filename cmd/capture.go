@@ -36,7 +36,7 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 			return
 		}
 		defer func() {
-			fmt.Println("Closing Session")
+			//fmt.Println("Closing Session")
 			_ = session.Close()
 		}()
 
@@ -70,6 +70,13 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 
 		//	Do the captures until done, interrupted, or cooling aborts
 		err = session.CaptureFrames(biasSets, darkSets)
+
+		//	Stop cooling
+		err = session.StopCooling(Settings.Cooling)
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			return
+		}
 
 	},
 }

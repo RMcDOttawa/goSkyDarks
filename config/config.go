@@ -32,13 +32,14 @@ type CoolingConfig struct {
 	CoolWaitMinutes int     //	How long to wait for target (minutes)
 	AbortOnCooling  bool    //	Abort collection if temp rises
 	CoolAbortTol    float64 //	Amount of temp rise before abort
+	OffAtEnd        bool    //	Turn off cooler at end of session
 }
 
 // StartConfig is configuration about delayed start to the collection
 type StartConfig struct {
-	Delay bool
-	Day   string
-	Time  string
+	Delay bool   //	Should start be delayed?
+	Day   string //	Day to start, yyyy-mm-dd or "today" or "tomorrow"
+	Time  string //	Time to start, HH:MM 24-hour format
 }
 
 // ServerConfig is configuration to reach the TheSkyX server
@@ -49,15 +50,15 @@ type ServerConfig struct {
 
 // BiasSet is the specification for one set of identical bias frames
 type BiasSet struct {
-	Frames  int
-	Binning int
+	Frames  int //	Number of frames in this set
+	Binning int //	Binning factor
 }
 
 // DarkSet is the specification for one set of identical bias frames
 type DarkSet struct {
-	Frames  int
-	Seconds int
-	Binning int
+	Frames  int //	Number of frames in this set
+	Seconds int //	Exposure time in seconds
+	Binning int //	Binning factor
 }
 
 // GetBiasSets retrieves the list of bias frames requested, converting them from the

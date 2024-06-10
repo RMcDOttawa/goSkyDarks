@@ -49,6 +49,7 @@ func runValidateCommand(_ *cobra.Command, _ []string) {
 	fmt.Printf("   Wait maximum: %d minutes\n", Settings.Cooling.CoolWaitMinutes)
 	fmt.Printf("   Abort if cooling outside tolerance: %t\n", Settings.Cooling.AbortOnCooling)
 	fmt.Printf("   Abort tolerance: %g degrees\n", Settings.Cooling.CoolAbortTol)
+	fmt.Printf("   Turn off cooler at end of session: %t\n", Settings.Cooling.OffAtEnd)
 
 	//	Bias Frames
 	fmt.Println("Bias Frames")

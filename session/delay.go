@@ -23,7 +23,7 @@ type DelayServiceInstance struct {
 //
 //	We return the number of seconds to facilitate mocking with time tracking
 func (s *DelayServiceInstance) DelayDuration(seconds int) (int, error) {
-	fmt.Println("DelayServiceInstance DelayDuration:", seconds)
+	//fmt.Println("DelayServiceInstance DelayDuration:", seconds)
 	time.Sleep(time.Duration(seconds) * time.Second)
 	return seconds, nil
 }

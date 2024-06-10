@@ -16,6 +16,7 @@ type TheSkyService interface {
 	Close() error
 	StartCooling(targetTemp float64) error
 	GetCameraTemperature() (float64, error)
+	StopCooling() error
 }
 
 type TheSkyServiceInstance struct {
@@ -82,6 +83,20 @@ func (service *TheSkyServiceInstance) StartCooling(targetTemp float64) error {
 	//	fmt.Printf("TheSkyServiceInstance/startCooling(%g) exits\n", targetTemp)
 	//}
 	return nil
+}
+
+func (service *TheSkyServiceInstance) StopCooling() error {
+	//fmt.Println("TheSkyServiceInstance/StopCooling()")
+	if !service.isOpen {
+		return errors.New("TheSkyServiceInstance/StopCooling: Connection not open")
+	}
+	err := service.driver.StopCooling()
+	if err != nil {
+		fmt.Println("TheSkyServiceInstance/StopCooling error from driver:", err)
+		return err
+	}
+	return nil
+
 }
 
 func (service *TheSkyServiceInstance) GetCameraTemperature() (float64, error) {

@@ -18,6 +18,7 @@ type TheSkyDriver interface {
 	Close() error
 	StartCooling(temp float64) error
 	GetCameraTemperature() (float64, error)
+	StopCooling() error
 }
 
 type TheSkyDriverInstance struct {
@@ -91,6 +92,18 @@ func (driver *TheSkyDriverInstance) StartCooling(temperature float64) error {
 
 	if err := driver.sendCommandIgnoreReply(commands.String()); err != nil {
 		fmt.Println("StartCooling error from driver:", err)
+		return err
+	}
+	return nil
+}
+
+func (driver *TheSkyDriverInstance) StopCooling() error {
+	var commands strings.Builder
+	commands.WriteString("ccdsoftCamera.Connect();\n")
+	commands.WriteString("ccdsoftCamera.RegulateTemperature=false;\n")
+
+	if err := driver.sendCommandIgnoreReply(commands.String()); err != nil {
+		fmt.Println("StopCooling error from driver:", err)
 		return err
 	}
 	return nil
