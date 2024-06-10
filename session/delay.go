@@ -11,21 +11,24 @@ import (
 //	in turn, will facilitate testing those other services with a mock delay
 
 type DelayService interface {
-	DelayDuration(seconds int64) error
+	DelayDuration(seconds int) (int, error)
 	DelayUntil(target time.Time) error
 }
 
-type ConcreteDelayService struct {
+type DelayServiceInstance struct {
 	settings config.SettingsType
 }
 
-func (s *ConcreteDelayService) DelayDuration(seconds int64) error {
-	fmt.Println("ConcreteDelayService DelayDuration:", seconds)
+// DelayDuration implements a simple sleep for the given number of seconds
+//
+//	We return the number of seconds to facilitate mocking with time tracking
+func (s *DelayServiceInstance) DelayDuration(seconds int) (int, error) {
+	fmt.Println("DelayServiceInstance DelayDuration:", seconds)
 	time.Sleep(time.Duration(seconds) * time.Second)
-	return nil
+	return seconds, nil
 }
 
-func (s *ConcreteDelayService) DelayUntil(target time.Time) error {
+func (s *DelayServiceInstance) DelayUntil(target time.Time) error {
 	//	Calculate duration from now until the target time
 	now := time.Now()
 	duration := target.Sub(now)
@@ -35,7 +38,7 @@ func (s *ConcreteDelayService) DelayUntil(target time.Time) error {
 		if s.settings.Verbosity > 3 || s.settings.Debug {
 			fmt.Printf("Waiting until %v (duration: %v)\n", target, duration)
 		}
-		_ = s.DelayDuration(int64(duration / time.Second))
+		_, _ = s.DelayDuration(int(duration / time.Second))
 		if s.settings.Verbosity > 3 || s.settings.Debug {
 			fmt.Println("Reached the target time!")
 		}

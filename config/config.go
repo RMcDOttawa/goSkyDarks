@@ -27,11 +27,11 @@ type DarkSetMap map[string]int
 // CoolingConfig is configuration about use the cameras cooler
 type CoolingConfig struct {
 	UseCooler       bool    //	Camera has cooler and we'll use it
-	CoolTo          float32 //	Target temperature
-	CoolStartTol    float32 //	Target plus-or-minus this
+	CoolTo          float64 //	Target temperature
+	CoolStartTol    float64 //	Target plus-or-minus this
 	CoolWaitMinutes int     //	How long to wait for target (minutes)
 	AbortOnCooling  bool    //	Abort collection if temp rises
-	CoolAbortTol    float32 //	Amount of temp rise before abort
+	CoolAbortTol    float64 //	Amount of temp rise before abort
 }
 
 // StartConfig is configuration about delayed start to the collection

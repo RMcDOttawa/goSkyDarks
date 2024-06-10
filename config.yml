@@ -1,12 +1,12 @@
 ---
-verbosity:    3              # default 1
-debug: true
+verbosity:    2              # default 1
+debug: false
 stateFile:  "./stateFile.state"
 cooling:
-    useCooler:           true
+    useCooler:           false
     coolTo:              -10.0
     coolStartTol:  2.0  
-    coolWaitMinutes:     30
+    coolWaitMinutes:     1
     abortOnCooling:      true
     coolAbortTol:  2.0
 start:

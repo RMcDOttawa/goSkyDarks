@@ -5,7 +5,6 @@
 package session
 
 import (
-	"fmt"
 	reflect "reflect"
 	time "time"
 
@@ -36,18 +35,17 @@ func (m *MockDelayService) EXPECT() *MockDelayServiceMockRecorder {
 }
 
 // DelayDuration mocks base method.
-func (m *MockDelayService) DelayDuration(arg0 int64) error {
+func (m *MockDelayService) DelayDuration(arg0 int) (int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DelayDuration", arg0)
-	ret0, _ := ret[0].(error)
-	fmt.Println("delay_mock DelayDuration 1 called")
-	return ret0
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // DelayDuration indicates an expected call of DelayDuration.
 func (mr *MockDelayServiceMockRecorder) DelayDuration(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	fmt.Println("delay_mock DelayDuration 2 called")
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DelayDuration", reflect.TypeOf((*MockDelayService)(nil).DelayDuration), arg0)
 }
 
@@ -56,13 +54,11 @@ func (m *MockDelayService) DelayUntil(arg0 time.Time) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DelayUntil", arg0)
 	ret0, _ := ret[0].(error)
-	fmt.Println("delay_mock DelayUntil 1 called")
 	return ret0
 }
 
 // DelayUntil indicates an expected call of DelayUntil.
 func (mr *MockDelayServiceMockRecorder) DelayUntil(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	fmt.Println("delay_mock DelayUntil 2 called")
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DelayUntil", reflect.TypeOf((*MockDelayService)(nil).DelayUntil), arg0)
 }
