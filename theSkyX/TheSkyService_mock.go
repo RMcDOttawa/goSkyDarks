@@ -33,6 +33,20 @@ func (m *MockTheSkyService) EXPECT() *MockTheSkyServiceMockRecorder {
 	return m.recorder
 }
 
+// CaptureDarkFrame mocks base method.
+func (m *MockTheSkyService) CaptureDarkFrame(arg0 int, arg1, arg2 float64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CaptureDarkFrame", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CaptureDarkFrame indicates an expected call of CaptureDarkFrame.
+func (mr *MockTheSkyServiceMockRecorder) CaptureDarkFrame(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CaptureDarkFrame", reflect.TypeOf((*MockTheSkyService)(nil).CaptureDarkFrame), arg0, arg1, arg2)
+}
+
 // Close mocks base method.
 func (m *MockTheSkyService) Close() error {
 	m.ctrl.T.Helper()
@@ -76,6 +90,21 @@ func (mr *MockTheSkyServiceMockRecorder) GetCameraTemperature() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCameraTemperature", reflect.TypeOf((*MockTheSkyService)(nil).GetCameraTemperature))
 }
 
+// MeasureDownloadTime mocks base method.
+func (m *MockTheSkyService) MeasureDownloadTime(arg0 int) (float64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MeasureDownloadTime", arg0)
+	ret0, _ := ret[0].(float64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MeasureDownloadTime indicates an expected call of MeasureDownloadTime.
+func (mr *MockTheSkyServiceMockRecorder) MeasureDownloadTime(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MeasureDownloadTime", reflect.TypeOf((*MockTheSkyService)(nil).MeasureDownloadTime), arg0)
+}
+
 // StartCooling mocks base method.
 func (m *MockTheSkyService) StartCooling(arg0 float64) error {
 	m.ctrl.T.Helper()
@@ -88,4 +117,18 @@ func (m *MockTheSkyService) StartCooling(arg0 float64) error {
 func (mr *MockTheSkyServiceMockRecorder) StartCooling(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartCooling", reflect.TypeOf((*MockTheSkyService)(nil).StartCooling), arg0)
+}
+
+// StopCooling mocks base method.
+func (m *MockTheSkyService) StopCooling() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopCooling")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopCooling indicates an expected call of StopCooling.
+func (mr *MockTheSkyServiceMockRecorder) StopCooling() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopCooling", reflect.TypeOf((*MockTheSkyService)(nil).StopCooling))
 }

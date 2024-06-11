@@ -69,7 +69,7 @@ func runValidateCommand(_ *cobra.Command, _ []string) {
 		fmt.Println("   No dark sets")
 	} else {
 		for _, dark := range df {
-			fmt.Printf("    %d frames of %d seconds binned at %d\n",
+			fmt.Printf("    %d frames of %g seconds binned at %d\n",
 				dark.Frames, dark.Seconds, dark.Binning)
 		}
 	}

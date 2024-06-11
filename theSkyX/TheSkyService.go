@@ -18,6 +18,7 @@ type TheSkyService interface {
 	GetCameraTemperature() (float64, error)
 	StopCooling() error
 	MeasureDownloadTime(binning int) (float64, error)
+	CaptureDarkFrame(binning int, seconds float64, downloadTime float64) error
 }
 
 type TheSkyServiceInstance struct {
@@ -123,4 +124,9 @@ func (service *TheSkyServiceInstance) MeasureDownloadTime(binning int) (float64,
 		return time, err
 	}
 	return time, nil
+}
+
+func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds float64, downloadTime float64) error {
+	fmt.Printf("TheSkyServiceInstance/CaptureDarkFrame(%d, %g, %g) STUB\n", binning, seconds, downloadTime)
+	return nil
 }

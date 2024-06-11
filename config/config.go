@@ -19,10 +19,10 @@ type SettingsType struct {
 }
 
 type BiasSetElementMap map[string]BiasSetMap
-type BiasSetMap map[string]int
+type BiasSetMap map[string]float64
 
 type DarkSetElementMap map[string]DarkSetMap
-type DarkSetMap map[string]int
+type DarkSetMap map[string]float64
 
 // CoolingConfig is configuration about use the cameras cooler
 type CoolingConfig struct {
@@ -56,9 +56,9 @@ type BiasSet struct {
 
 // DarkSet is the specification for one set of identical bias frames
 type DarkSet struct {
-	Frames  int //	Number of frames in this set
-	Seconds int //	Exposure time in seconds
-	Binning int //	Binning factor
+	Frames  int     //	Number of frames in this set
+	Seconds float64 //	Exposure time in seconds
+	Binning int     //	Binning factor
 }
 
 // GetBiasSets retrieves the list of bias frames requested, converting them from the
@@ -71,8 +71,8 @@ func (config *SettingsType) GetBiasSets() []BiasSet {
 		frames := mapEl["biasset"]["frames"]
 		binning := mapEl["biasset"]["binning"]
 		result = append(result, BiasSet{
-			Frames:  frames,
-			Binning: binning,
+			Frames:  int(frames),
+			Binning: int(binning),
 		})
 	}
 	return result
@@ -89,9 +89,9 @@ func (config *SettingsType) GetDarkSets() []DarkSet {
 		seconds := mapEl["darkset"]["seconds"]
 		binning := mapEl["darkset"]["binning"]
 		result = append(result, DarkSet{
-			Frames:  frames,
+			Frames:  int(frames),
 			Seconds: seconds,
-			Binning: binning,
+			Binning: int(binning),
 		})
 	}
 	return result

@@ -22,7 +22,14 @@ var rootCmd = &cobra.Command{
 somewhere on your local network, and orchestrate it taking a set of 
 dark or bias frames with a variety of specifications.  
 This enables the automation of the process of collecting these 
-calibration frames.`,
+calibration frames.
+
+Note that TheSkyX doesn't offer any way to receive the collected frames over the
+network. They will be saved on the computer where TheSkyX is running, in the location
+specified in the "autosave location" in the application.  You can configure theSky to save
+to a network drive if you like, but that is up to you. This program only causes the images
+to be captured, it does not deal with where they are stored.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Running root-level command")
 		//if Debug || Verbosity >= 4 {
