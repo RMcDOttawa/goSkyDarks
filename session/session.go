@@ -1,11 +1,13 @@
 package session
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"goskydarks/config"
 	"goskydarks/theSkyX"
 	"math"
+	"os"
 	"time"
 )
 
@@ -31,6 +33,22 @@ func NewSession(settings config.SettingsType) (*Session, error) {
 		theSkyService: tsxService,
 	}
 	return session, nil
+}
+
+// CapturePlan is a struct that holds the plan for capturing frames, including what is needed
+// and what has already been done.  It is used to track progress and to determine what
+// needs to be done next.  It is saved to a file so that a session can be resumed if interrupted.
+// Since capturing a frame includes waiting while it is downloaded, we also pre-measure the
+// download time for each binning factor used so this can be taken into account in the delay waiting
+// for the exposure to complete.  (TheSkyX doesn't provide a download complete notification)
+// The download time is a linear function of the file size, which is a linear function of the binning factor,
+// so we will just keep a measure for each binning level
+type CapturePlan struct {
+	DarksRequired map[string]config.DarkSet
+	BiasRequired  map[string]config.BiasSet
+	DarksDone     map[string]int
+	BiasDone      map[string]int
+	DownloadTimes map[int]float64 // seconds, indexed by binning
 }
 
 // SetDelayService allows delay service to be replaced with a mock for testing
@@ -159,10 +177,45 @@ func (s *Session) waitForTargetTemperature(target float64, tolerance float64, ma
 // If, on entry, the state file indicates that a session was already underway and partially
 // completed, that session is continued.  So the given bias and dark list represents the
 // total set of frames wanted - not necessarily the captures that will be done on this call
-func (s *Session) CaptureFrames(biasSets []config.BiasSet, darkSets []config.DarkSet) error {
+func (s *Session) CaptureFrames(
+	biasSets []config.BiasSet,
+	darkSets []config.DarkSet,
+	stateFilePath string,
+	coolingConfig config.CoolingConfig) error {
 	fmt.Println("CaptureFrames STUB")
 	fmt.Printf("   Bias: %v\n", biasSets)
 	fmt.Printf("   Dark: %v\n", darkSets)
+
+	//	Is the session open?
+	if !s.isConnected {
+		return errors.New("session not connected")
+	}
+
+	//  Get plan for captures needed, including state of what is already done
+	capturePlan, err := s.getCapturePlan(biasSets, darkSets, stateFilePath)
+	if err != nil {
+		fmt.Println("Error in Session CaptureFrames, getting capture plan:", err)
+		return err
+	}
+
+	//	Ensure we have download time measurements for all the binning factors we will use
+	if err := s.updateDownloadTimes(capturePlan); err != nil {
+		fmt.Println("Error in Session CaptureFrames, updating download times")
+		return err
+	}
+
+	//	Capture frames as needed
+	if err := s.captureFrames(capturePlan, coolingConfig); err != nil {
+		fmt.Println("Error in Session capturing frames")
+		return err
+	}
+
+	//  Update the saved plan one last time (has been updated during capture)
+	if err := s.saveCapturePlan(capturePlan, stateFilePath); err != nil {
+		fmt.Println("Error in Session saving capture plan")
+		return err
+	}
+
 	return nil
 }
 
@@ -176,5 +229,185 @@ func (s *Session) StopCooling(cooling config.CoolingConfig) error {
 			fmt.Printf("Cooling switched off at end of session")
 		}
 	}
+	return nil
+}
+
+// getCapturePlan creates a plan for capturing the frames, based on the configuration and the state file
+// We start with a plan based on the config file, then update it to reflect work already done as recorded in
+//
+//	the state file.
+//	If the state file includes captures not in the current config, we ignore them - we are using only the "how many frames are done"
+//	info from the state file, plus the download times for each binning level that may be recorded
+func (s *Session) getCapturePlan(biasSets []config.BiasSet, darkSets []config.DarkSet, stateFilePath string) (*CapturePlan, error) {
+	//fmt.Println("getCapturePlan ")
+	//fmt.Println("  bias sets:", biasSets)
+	//fmt.Println("  dark sets:", darkSets)
+	//fmt.Println("  state file:", stateFilePath)
+	capturePlan := s.createPlanFromConfig(biasSets, darkSets)
+	err := s.updatePlanFromStateFile(capturePlan, stateFilePath)
+	if err != nil {
+		fmt.Println("Error in Session getCapturePlan, updating plan from state file:", err)
+		return nil, err
+	}
+	return capturePlan, nil
+}
+
+func (s *Session) createPlanFromConfig(biasSets []config.BiasSet, darkSets []config.DarkSet) *CapturePlan {
+	//fmt.Println("createPlanFromConfig STUB")
+	//fmt.Println("  bias sets:", biasSets)
+	//fmt.Println("  dark sets:", darkSets)
+	capturePlan := CapturePlan{}
+	//	Create the empty maps
+	capturePlan.DarksRequired = make(map[string]config.DarkSet)
+	capturePlan.BiasRequired = make(map[string]config.BiasSet)
+	capturePlan.DarksDone = make(map[string]int)
+	capturePlan.BiasDone = make(map[string]int)
+	capturePlan.DownloadTimes = make(map[int]float64)
+
+	//	Initialize the settings for every dark frame set needed
+	for _, darkSet := range darkSets {
+		key := makeDarkKey(darkSet)
+		capturePlan.DarksRequired[key] = darkSet
+		capturePlan.DarksDone[key] = 0
+		_, ok := capturePlan.DownloadTimes[darkSet.Binning]
+		if !ok {
+			capturePlan.DownloadTimes[darkSet.Binning] = 0
+		}
+	}
+
+	//	Initialize the settings for every bias frame set needed
+	for _, biasSet := range biasSets {
+		key := makeBiasKey(biasSet)
+		capturePlan.BiasRequired[key] = biasSet
+		capturePlan.BiasDone[key] = 0
+		_, ok := capturePlan.DownloadTimes[biasSet.Binning]
+		if !ok {
+			capturePlan.DownloadTimes[biasSet.Binning] = 0
+		}
+	}
+
+	return &capturePlan
+}
+
+func makeDarkKey(set config.DarkSet) string {
+	return fmt.Sprintf("Dark_%d_%d_%d", set.Frames, set.Seconds, set.Binning)
+}
+
+func makeBiasKey(set config.BiasSet) string {
+	return fmt.Sprintf("Bias_%d_%d", set.Frames, set.Binning)
+}
+
+func (s *Session) updatePlanFromStateFile(capturePlan *CapturePlan, stateFilePath string) error {
+	//fmt.Println("updatePlanFromStateFile STUB")
+	//fmt.Println("  plan:", capturePlan)
+	//fmt.Println("  state file:", stateFilePath)
+
+	//	Read state file into a separate plan on the side.
+	//  Note that "file not found" is not an error and results in a nil stateFilePlan
+	stateFilePlan, err := s.ReadStateFile(stateFilePath)
+	if err != nil {
+		fmt.Println("Error in Session updatePlanFromStateFile, reading state file:", err)
+		return err
+	}
+	if stateFilePlan == nil {
+		//	No state file, so nothing to update
+		return nil
+	}
+
+	//	Update counts of what is already done
+	for key, count := range capturePlan.BiasDone {
+		stateFileCount := stateFilePlan.BiasDone[key]
+		if stateFileCount > count {
+			capturePlan.BiasDone[key] = stateFileCount
+		}
+	}
+	for key, count := range capturePlan.DarksDone {
+		stateFileCount := stateFilePlan.DarksDone[key]
+		if stateFileCount > count {
+			capturePlan.DarksDone[key] = stateFileCount
+		}
+	}
+
+	//	Update download times
+	for binning, downloadTime := range capturePlan.DownloadTimes {
+		stateFileTime := stateFilePlan.DownloadTimes[binning]
+		if stateFileTime > downloadTime {
+			capturePlan.DownloadTimes[binning] = stateFileTime
+		}
+	}
+
+	return nil
+}
+
+func (s *Session) updateDownloadTimes(capturePlan *CapturePlan) error {
+	//fmt.Printf("updateDownloadTimes. CapturePlan: %#v\n", *capturePlan)
+	for binning, seconds := range capturePlan.DownloadTimes {
+		//fmt.Printf("  Binning %d, download time %g\n", binning, seconds)
+		if seconds == 0 {
+			measuredTime, err := s.theSkyService.MeasureDownloadTime(binning)
+			if err != nil {
+				return errors.New("error measuring download time")
+			}
+			capturePlan.DownloadTimes[binning] = measuredTime
+		}
+	}
+	//fmt.Printf("  Download times now %#v\n", capturePlan.DownloadTimes)
+	return nil
+}
+
+func (s *Session) captureFrames(capturePlan *CapturePlan, coolingConfig config.CoolingConfig) error {
+	fmt.Printf("captureFrames STUB. CapturePlan: %#v, cooling: %#v\n", *capturePlan, coolingConfig)
+	return nil
+}
+
+func (s *Session) ReadStateFile(stateFilePath string) (*CapturePlan, error) {
+	//fmt.Printf("ReadStateFile.  Path: %s\n", stateFilePath)
+
+	//	See if file exists
+	_, err := os.Stat(stateFilePath)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+
+	//	Read file into json string
+	fileContentsBytes, err := os.ReadFile(stateFilePath)
+	fileContents := string(fileContentsBytes)
+
+	//	Unmarshall JSON to data structure
+	var stateFilePlan = &CapturePlan{}
+	err = json.Unmarshal([]byte(fileContents), stateFilePlan)
+	if err != nil {
+		return nil, errors.New("error unmarshalling state file")
+	}
+
+	return stateFilePlan, nil
+}
+func (s *Session) saveCapturePlan(capturePlan *CapturePlan, stateFilePath string) error {
+	//fmt.Printf("saveCapturePlan. Plan: %#v, Path: %s", *capturePlan, stateFilePath)
+	jsonBytes, err := json.MarshalIndent(capturePlan, "", "   ")
+	if err != nil {
+		fmt.Println("Error in Session saveCapturePlan, marshalling plan:", err)
+		return err
+	}
+	//fmt.Println("\n\n***\n\nJSON to save to file:", string(jsonBytes))
+
+	file, err := os.OpenFile(stateFilePath, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("Could not open file to write data:", err)
+		return err
+	}
+	defer func(file *os.File) {
+		_ = file.Close()
+	}(file)
+	numWritten, err := file.Write([]byte(jsonBytes))
+	if err != nil {
+		fmt.Println("Unable to write new state data file")
+		return err
+	}
+	if numWritten != len(jsonBytes) {
+		fmt.Printf("Expected to write %d bytes to state file, but actually wrote %d bytes.\n",
+			len(jsonBytes), numWritten)
+	}
+
 	return nil
 }

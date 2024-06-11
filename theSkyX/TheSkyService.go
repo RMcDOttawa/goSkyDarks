@@ -17,6 +17,7 @@ type TheSkyService interface {
 	StartCooling(targetTemp float64) error
 	GetCameraTemperature() (float64, error)
 	StopCooling() error
+	MeasureDownloadTime(binning int) (float64, error)
 }
 
 type TheSkyServiceInstance struct {
@@ -110,4 +111,16 @@ func (service *TheSkyServiceInstance) GetCameraTemperature() (float64, error) {
 		return temp, err
 	}
 	return temp, nil
+}
+
+func (service *TheSkyServiceInstance) MeasureDownloadTime(binning int) (float64, error) {
+	if !service.isOpen {
+		return 0.0, errors.New("TheSkyServiceInstance/MeasureDownloadTime: Connection not open")
+	}
+	time, err := service.driver.MeasureDownloadTime(binning)
+	if err != nil {
+		fmt.Println("TheSkyServiceInstance/MeasureDownloadTime error from driver:", err)
+		return time, err
+	}
+	return time, nil
 }

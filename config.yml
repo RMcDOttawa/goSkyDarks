@@ -3,7 +3,7 @@ verbosity:    2              # default 1
 debug: false
 stateFile:  "./stateFile.state"
 cooling:
-    useCooler:        true
+    useCooler:        false
     coolTo:           -10.0
     coolStartTol:     2.0
     coolWaitMinutes:  30

@@ -19,6 +19,7 @@ type TheSkyDriver interface {
 	StartCooling(temp float64) error
 	GetCameraTemperature() (float64, error)
 	StopCooling() error
+	MeasureDownloadTime(binning int) (float64, error)
 }
 
 type TheSkyDriverInstance struct {
@@ -128,6 +129,101 @@ func (driver *TheSkyDriverInstance) GetCameraTemperature() (float64, error) {
 	return numberResult, nil
 }
 
+// MeasureDownloadTime measures the time needed to download an image from the camera to the TheSkyX application
+// We do this because the download time is often significant, especially on older cameras, and because TheSkyX
+// does not provide a notification that download is complete. By knowing the download time, we can initiate an exposure
+// and then wait (exposure time + download time) before polling if the camera is done.
+//
+// Download time is a function of the binning level used - higher binning means fewer pixels to download, so faster.
+//
+// To measure the download time, we direct the server to capture a 0.1-second exposure at the given binning level.
+// A zero-length bias frame would be better, but not all cameras support this, so we settle for the 0.1 dark.
+// We will have the server note the time before and after this exposure, and return the two numbers to us.
+// Then we calculate the download time as the difference minus the 0.1 second of the exposure itself.
+
+// Here is the javascript we will use, explained:
+//	 // Prepare
+//	 ccdsoftCamera.Connect();						// Open the camera
+//	 ccdsoftCamera.Autoguider=false;    			// Use main camera not autoguider
+//	 ccdsoftCamera.Asynchronous=false;  			// synchronous (i.e., wait)
+//	 ccdsoftCamera.Frame=3;  						// Type "3" is dark frame
+//	 ccdsoftCamera.ImageReduction=0;				// Don't reduce the image
+//	 ccdsoftCamera.ToNewWindow=false;				// Don't open a new window with the image
+//	 ccdsoftCamera.ccdsoftAutoSaveAs=0;				// Don't save the image to disk
+//	 ccdsoftCamera.AutoSaveOn=false;				// Don't save the image to disk
+//	 ccdsoftCamera.BinX=1;							// Set the binning level
+//	 ccdsoftCamera.BinY=1;							// Set the binning level
+//	 ccdsoftCamera.ExposureTime=0.1;				// Set the exposure time
+//
+//	 // Record the time before the image
+//	 sky6Utils.ComputeUniversalTime();				// Put current time in dOut0 variable (theSKyX weirdness)
+//	 var timeBefore=sky6Utils.dOut0;
+//
+//	 // Take and download the image
+//	 var cameraResult = ccdsoftCamera.TakeImage();	// Take the image
+//
+//	 // Record the time after the image
+//	 sky6Utils.ComputeUniversalTime();
+//	 var timeAfter=sky6Utils.dOut0;
+//
+//	 // Return the before and after times
+//	 var out;
+//	 out = timeBefore + "," + timeAfter + "\n";
+
+const shortExposureLength = 0.1
+
+func (driver *TheSkyDriverInstance) MeasureDownloadTime(binning int) (float64, error) {
+	if driver.verbosity > 2 || driver.debug {
+		fmt.Println("TheSkyDriverInstance/MeasureDownloadTime ", binning)
+	}
+	var message strings.Builder
+	message.WriteString("ccdsoftCamera.Connect();\n")
+	message.WriteString("ccdsoftCamera.Autoguider=false;\n")
+	message.WriteString("ccdsoftCamera.Asynchronous=false;\n")
+	message.WriteString("ccdsoftCamera.Frame=3;\n")
+	message.WriteString("ccdsoftCamera.ImageReduction=0;\n")
+	message.WriteString("ccdsoftCamera.ToNewWindow=false;\n")
+	message.WriteString("ccdsoftCamera.ccdsoftAutoSaveAs=0;\n")
+	message.WriteString("ccdsoftCamera.AutoSaveOn=false;\n")
+	message.WriteString("ccdsoftCamera.BinX=1;\n")
+	message.WriteString("ccdsoftCamera.BinY=1;\n")
+	message.WriteString(fmt.Sprintf("ccdsoftCamera.ExposureTime=%.2f;\n", shortExposureLength))
+	message.WriteString("sky6Utils.ComputeUniversalTime();\n")
+	message.WriteString("var timeBefore=sky6Utils.dOut0;\n")
+	message.WriteString("var cameraResult = ccdsoftCamera.TakeImage();\n")
+	message.WriteString("sky6Utils.ComputeUniversalTime();\n")
+	message.WriteString("var timeAfter=sky6Utils.dOut0;\n")
+	message.WriteString("var out;\n")
+	message.WriteString("out = timeBefore + \",\" + timeAfter + \"\\n\";\n")
+	//fmt.Println("Command to send:\n", message.String())
+
+	responseString, err := driver.sendCommandStringReply(message.String())
+	if err != nil {
+		fmt.Println("MeasureDownloadTime error from driver:", err)
+		return -1.0, err
+	}
+	responseParts := strings.Split(responseString, ",")
+
+	timeBefore, err := strconv.ParseFloat(responseParts[0], 64)
+	if err != nil {
+		return -1.0, errors.New("error parsing timeBefore")
+	}
+	timeAfter, err := strconv.ParseFloat(responseParts[1], 64)
+	if err != nil {
+		return -1.0, errors.New("error parsing timeAfter")
+	}
+
+	//	Edge case.  If timeAfter is less than timeBefore, it means the day changed during the exposure
+	//	We will add 24 hours to timeAfter to correct this
+	if timeAfter < timeBefore {
+		timeAfter += 24.0
+	}
+
+	secondsTaken := (timeAfter-timeBefore)*60.0*60.0 - shortExposureLength
+
+	return secondsTaken, nil
+}
+
 // sendCommandNoReply is an internal method that sends the given command string to the server.
 // This is used for commands where no reply is to be read and processed by the caller
 // (There is a reply from the server, but it is used only to verify successful execution)
@@ -174,6 +270,28 @@ func (driver *TheSkyDriverInstance) sendCommandFloatReply(command string) (float
 	}
 
 	return parsedNum, nil
+}
+
+// sendCommandStringReply is an internal method that sends the given command string to the server.
+// This is used for commands where an arbitrary string reply is to be read and processed by the caller
+func (driver *TheSkyDriverInstance) sendCommandStringReply(command string) (string, error) {
+	if driver.verbosity > 2 || driver.debug {
+		fmt.Println("TheSkyDriverInstance/sendCommandStringReply: ", command)
+	}
+	var message strings.Builder
+	message.WriteString("/* Java Script */\n")
+	message.WriteString("/* Socket Start Packet */\n")
+	message.WriteString(command)
+	message.WriteString("/* Socket End Packet */\n")
+
+	responseString, err := driver.sendCommand(message.String())
+	trimmedResponse := strings.TrimSpace(responseString)
+	if err != nil {
+		fmt.Println("sendCommandNoReply error from driver:", err)
+		return "", err
+	}
+
+	return trimmedResponse, nil
 }
 
 // sendCommand is an internal method that sends the given command packet to the server and

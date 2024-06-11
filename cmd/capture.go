@@ -21,6 +21,12 @@ Use the RESET command to prevent this and start over.
 Note the config file allows the capture to be deferred until later - e.g. after dark when it is cooler.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		//	State file is mandatory when doing a capture
+		if Settings.StateFile == "" {
+			_, _ = fmt.Fprintln(os.Stderr, "State file is required for capture")
+			return
+		}
+
 		//	Get bias and dark frame specs
 		biasSets := Settings.GetBiasSets()
 		darkSets := Settings.GetDarkSets()
@@ -69,7 +75,7 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 		}
 
 		//	Do the captures until done, interrupted, or cooling aborts
-		err = session.CaptureFrames(biasSets, darkSets)
+		err = session.CaptureFrames(biasSets, darkSets, Settings.StateFile, Settings.Cooling)
 
 		//	Stop cooling
 		err = session.StopCooling(Settings.Cooling)
