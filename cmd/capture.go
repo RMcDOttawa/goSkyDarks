@@ -75,7 +75,7 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 		}
 
 		//	Do the captures until done, interrupted, or cooling aborts
-		err = session.CaptureFrames(biasSets, darkSets, Settings.StateFile, Settings.Cooling)
+		err = session.CaptureFrames(biasSets, darkSets, Settings.Cooling)
 
 		//	Stop cooling
 		err = session.StopCooling(Settings.Cooling)

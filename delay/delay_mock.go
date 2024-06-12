@@ -2,7 +2,7 @@
 // Source: goskydarks/session (interfaces: DelayService)
 
 // Package session is a generated GoMock package.
-package session
+package delay
 
 import (
 	reflect "reflect"

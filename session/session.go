@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"goskydarks/config"
+	"goskydarks/delay"
 	"goskydarks/theSkyX"
 	"math"
 	"time"
@@ -12,7 +13,7 @@ import (
 // Session struct implements the session service, used for overall session control
 // such as start time or resuming from saved state
 type Session struct {
-	delayService     DelayService //	Used to delay start; replace with mock for testing
+	delayService     delay.DelayService //	Used to delay start; replace with mock for testing
 	settings         config.SettingsType
 	theSkyService    theSkyX.TheSkyService
 	stateFileService StateFileService
@@ -20,11 +21,10 @@ type Session struct {
 }
 
 func NewSession(settings config.SettingsType) (*Session, error) {
-	concreteDelayService := &DelayServiceInstance{
-		settings: settings,
-	}
+	concreteDelayService := delay.NewDelayService(settings)
 	tsxService := theSkyX.NewTheSkyService(
 		settings,
+		concreteDelayService,
 	)
 	stateFileService := NewStateFileService(settings.StateFile)
 	session := &Session{
@@ -53,7 +53,7 @@ type CapturePlan struct {
 }
 
 // SetDelayService allows delay service to be replaced with a mock for testing
-func (s *Session) SetDelayService(delayService DelayService) {
+func (s *Session) SetDelayService(delayService delay.DelayService) {
 	s.delayService = delayService
 }
 
@@ -89,6 +89,12 @@ func (s *Session) ConnectToServer(server config.ServerConfig) error {
 		fmt.Println("Error in Session ConnectToServer:", err)
 		return err
 	}
+
+	// TheSky sometimes returns nonsense as its first transaction.  e.g. sometimes the first temperature
+	// read is -100, which is unlikely.  So we read and ignore the first temperature
+	_, _ = s.theSkyService.GetCameraTemperature()
+	//fmt.Println("Ignoring first temperature read:", ignoreTemp)
+
 	s.isConnected = true
 	return nil
 }
@@ -352,18 +358,23 @@ func (s *Session) captureDarkFrames(capturePlan *CapturePlan, coolingConfig conf
 }
 
 func (s *Session) captureDarkSet(plan *CapturePlan, key string, set config.DarkSet, coolingConfig config.CoolingConfig) error {
-	fmt.Printf("captureDarkSet  %s : %#v\n", key, set)
+	if s.settings.Verbosity > 0 || s.settings.Debug {
+		fmt.Printf("Handling dark frames set: %d frames of %.2f seconds binned %d\n", set.Frames, set.Seconds, set.Binning)
+	}
 	if plan.DarksDone[key] >= set.Frames {
-		if s.settings.Verbosity > 2 || s.settings.Debug {
+		if s.settings.Verbosity > 1 || s.settings.Debug {
 			fmt.Printf("  Already have all %d frames in set %s\n", set.Frames, key)
 		}
 		return nil
 	}
-	if plan.DarksDone[key] < set.Frames {
+
+	framesNeeded := set.Frames - plan.DarksDone[key]
+	if framesNeeded > 0 {
 		if s.settings.Verbosity > 1 || s.settings.Debug {
-			fmt.Printf("Still need %d frames (of %d) in set %s\n", set.Frames-plan.DarksDone[key], set.Frames, key)
+			fmt.Printf("  Still need %d frames (of %d) in set %s\n", framesNeeded, set.Frames, key)
 		}
 	}
+	frameCount := 0
 	for plan.DarksDone[key] < set.Frames {
 		abandon, err := s.CheckAbandonForCooling(coolingConfig)
 		if err != nil {
@@ -376,7 +387,11 @@ func (s *Session) captureDarkSet(plan *CapturePlan, key string, set config.DarkS
 			return errors.New(message)
 		}
 
-		//fmt.Printf("  Capturing frame %d of %d\n", plan.DarksDone[key]+1, set.Frames)
+		frameCount++
+		if s.settings.Verbosity > 1 || s.settings.Debug {
+			fmt.Printf("    Capturing dark frame %d of %d:  %.2f seconds binned %d\n", frameCount, framesNeeded, set.Seconds, set.Binning)
+		}
+
 		if err := s.theSkyService.CaptureDarkFrame(set.Binning, set.Seconds, plan.DownloadTimes[set.Binning]); err != nil {
 			fmt.Println("Error in Session captureDarkSet, capturing dark frame:", err)
 			return err
@@ -400,18 +415,18 @@ func (s *Session) captureBiasFrames(capturePlan *CapturePlan, coolingConfig conf
 }
 
 func (s *Session) CheckAbandonForCooling(coolingConfig config.CoolingConfig) (bool, error) {
-	fmt.Println("CheckAbandonForCooling")
+	//fmt.Println("CheckAbandonForCooling")
 	if !coolingConfig.AbortOnCooling {
 		return false, nil
 	}
 	cameraTemperature, err := s.theSkyService.GetCameraTemperature()
-	fmt.Println("  Camera temperature:", cameraTemperature)
+	//fmt.Println("  Camera temperature:", cameraTemperature)
 	if err != nil {
 		fmt.Println("Error in Session CheckAbandonForCooling, getting camera temperature:", err)
 		return false, err
 	}
 	variation := math.Abs(cameraTemperature - coolingConfig.CoolTo)
-	fmt.Printf("  Temp %g and target %g = variation %g\n", cameraTemperature, coolingConfig.CoolTo, variation)
+	//fmt.Printf("  Temp %g and target %g = variation %g\n", cameraTemperature, coolingConfig.CoolTo, variation)
 	if variation >= coolingConfig.CoolAbortTol {
 		// Camera temperature is unacceptable - return an abort request
 		return true, nil

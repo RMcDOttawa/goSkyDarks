@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"goskydarks/config"
+	"goskydarks/delay"
+	"math"
 )
 
 //	TheSkyService is a high-level interface to the set of logical services we use to control
@@ -22,17 +24,19 @@ type TheSkyService interface {
 }
 
 type TheSkyServiceInstance struct {
-	settings config.SettingsType
-	driver   TheSkyDriver
-	isOpen   bool
+	settings     config.SettingsType
+	driver       TheSkyDriver
+	isOpen       bool
+	delayService delay.DelayService
 }
 
 // NewTheSkyService is the constructor for the instance of this service
-func NewTheSkyService(settings config.SettingsType) TheSkyService {
+func NewTheSkyService(settings config.SettingsType, delayService delay.DelayService) TheSkyService {
 	service := &TheSkyServiceInstance{
-		settings: settings,
-		isOpen:   false,
-		driver:   NewTheSkyDriver(settings.Debug, settings.Verbosity),
+		settings:     settings,
+		isOpen:       false,
+		driver:       NewTheSkyDriver(settings.Debug, settings.Verbosity),
+		delayService: delayService,
 	}
 	return service
 }
@@ -126,7 +130,53 @@ func (service *TheSkyServiceInstance) MeasureDownloadTime(binning int) (float64,
 	return time, nil
 }
 
+const andALittleExtra = 0.5
+const pollingInterval = 1.0 //	seconds between polls
+const timeoutFactor = 5.0   // How much longer to wait than the exposure time
+
 func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds float64, downloadTime float64) error {
-	fmt.Printf("TheSkyServiceInstance/CaptureDarkFrame(%d, %g, %g) STUB\n", binning, seconds, downloadTime)
-	return nil
+	if service.settings.Verbosity > 2 || service.settings.Debug {
+		fmt.Printf("TheSkyServiceInstance/CaptureDarkFrame(%d, %g, %g) \n", binning, seconds, downloadTime)
+	}
+	err := service.driver.StartDarkFrameCapture(binning, seconds, downloadTime)
+	if err != nil {
+		fmt.Println("TheSkyServiceInstance/CaptureDarkFrame error from driver:", err)
+		return err
+	}
+	//	Now we'll wait until the exposure is probably over - exposure time + download time
+	delayUntilComplete := int(math.Round(seconds + downloadTime + andALittleExtra))
+	if service.settings.Verbosity > 2 {
+		fmt.Println("Exposure started. Waiting for ", delayUntilComplete)
+	}
+	if _, err := service.delayService.DelayDuration(delayUntilComplete); err != nil {
+		fmt.Println("TheSkyServiceInstance/CaptureDarkFrame error from delay service:", err)
+		return err
+	}
+	//	Now we poll the camera repeatedly until it reports done
+	maximumWaitSeconds := (seconds + downloadTime) * timeoutFactor
+	secondsWaitedSoFar := 0.0
+	for {
+		done, err := service.driver.IsCaptureDone()
+		if err != nil {
+			fmt.Println("TheSkyServiceInstance/CaptureDarkFrame error from IsCaptureDone:", err)
+			return err
+		}
+		if done {
+			if service.settings.Verbosity > 2 {
+				fmt.Println("capture is done, returning")
+			}
+			return nil
+		}
+		if secondsWaitedSoFar > maximumWaitSeconds {
+			return errors.New("TheSkyServiceInstance/CaptureDarkFrame: Timeout waiting for capture to finish")
+		}
+		if service.settings.Verbosity > 2 {
+			fmt.Println("Camera not finished. Delaying ", pollingInterval)
+		}
+		if _, err := service.delayService.DelayDuration(int(math.Round(pollingInterval))); err != nil {
+			fmt.Println("TheSkyServiceInstance/CaptureDarkFrame error from polling delay service:", err)
+			return err
+		}
+		secondsWaitedSoFar += pollingInterval
+	}
 }

@@ -27,7 +27,7 @@ func NewStateFileService(stateFilePath string) StateFileService {
 }
 
 func (sfs *StateFileServiceInstance) SavePlanToFile(capturePlan *CapturePlan) error {
-	fmt.Println("StateFileServiceInstance/SavePlanToFile()")
+	//fmt.Println("StateFileServiceInstance/SavePlanToFile()")
 	jsonBytes, err := json.MarshalIndent(capturePlan, "", "   ")
 	if err != nil {
 		fmt.Println("Error in Session saveCapturePlan, marshalling plan:", err)
@@ -57,7 +57,7 @@ func (sfs *StateFileServiceInstance) SavePlanToFile(capturePlan *CapturePlan) er
 }
 
 func (sfs *StateFileServiceInstance) UpdatePlanFromFile(capturePlan *CapturePlan) error {
-	fmt.Println("StateFileServiceInstance/SavePlanToFile()")
+	//fmt.Println("StateFileServiceInstance/UpdatePlanFromFile()")
 
 	//	Read state file into a separate plan on the side.
 	//  Note that "file not found" is not an error and results in a nil stateFilePlan
@@ -97,7 +97,7 @@ func (sfs *StateFileServiceInstance) UpdatePlanFromFile(capturePlan *CapturePlan
 }
 
 func (sfs *StateFileServiceInstance) ReadStateFile() (*CapturePlan, error) {
-	fmt.Println("StateFileServiceInstance/ReadStateFile()")
+	//fmt.Println("StateFileServiceInstance/ReadStateFile()")
 	//fmt.Printf("ReadStateFile.  Path: %s\n", stateFilePath)
 
 	//	See if file exists

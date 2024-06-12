@@ -1,4 +1,4 @@
-package session
+package delay
 
 import (
 	"fmt"
@@ -19,11 +19,23 @@ type DelayServiceInstance struct {
 	settings config.SettingsType
 }
 
+func NewDelayService(settings config.SettingsType) DelayService {
+	service := &DelayServiceInstance{
+		settings: settings,
+	}
+	return service
+}
+
 // DelayDuration implements a simple sleep for the given number of seconds
 //
 //	We return the number of seconds to facilitate mocking with time tracking
 func (s *DelayServiceInstance) DelayDuration(seconds int) (int, error) {
-	//fmt.Println("DelayServiceInstance DelayDuration:", seconds)
+	if s.settings.Verbosity > 4 {
+		fmt.Println("DelayServiceInstance DelayDuration:", seconds)
+	}
+	if seconds <= 0 {
+		return 0, nil
+	}
 	time.Sleep(time.Duration(seconds) * time.Second)
 	return seconds, nil
 }

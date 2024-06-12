@@ -20,6 +20,8 @@ type TheSkyDriver interface {
 	GetCameraTemperature() (float64, error)
 	StopCooling() error
 	MeasureDownloadTime(binning int) (float64, error)
+	StartDarkFrameCapture(binning int, seconds float64, time float64) error
+	IsCaptureDone() (bool, error)
 }
 
 type TheSkyDriverInstance struct {
@@ -224,7 +226,35 @@ func (driver *TheSkyDriverInstance) MeasureDownloadTime(binning int) (float64, e
 	return secondsTaken, nil
 }
 
-// sendCommandNoReply is an internal method that sends the given command string to the server.
+func (driver *TheSkyDriverInstance) StartDarkFrameCapture(binning int, seconds float64, downloadTime float64) error {
+	if driver.verbosity > 2 || driver.debug {
+		fmt.Println("TheSkyDriverInstance/CaptureDarkFrame ", binning, seconds, downloadTime)
+	}
+	var message strings.Builder
+	message.WriteString("ccdsoftCamera.Connect();\n")         // Open camera
+	message.WriteString("ccdsoftCamera.Autoguider=false;\n")  // Use main camera not autoguider
+	message.WriteString("ccdsoftCamera.Asynchronous=true;\n") // Async (don't wait)
+	message.WriteString("ccdsoftCamera.Frame=3;\n")           // Dark frame
+	message.WriteString("ccdsoftCamera.ImageReduction=0;\n")  // No image reduction
+	message.WriteString("ccdsoftCamera.ToNewWindow=false;\n") // Don't open a new window
+	message.WriteString("ccdsoftCamera.AutoSaveOn=true;\n")   // Save the image to configured location
+	message.WriteString(fmt.Sprintf("ccdsoftCamera.BinX=%d;\n", binning))
+	message.WriteString(fmt.Sprintf("ccdsoftCamera.BinY=%d;\n", binning))
+	message.WriteString(fmt.Sprintf("ccdsoftCamera.ExposureTime=%.2f;\n", seconds))
+	message.WriteString("var cameraResult = ccdsoftCamera.TakeImage();\n")
+	message.WriteString("var Out;\n")
+	message.WriteString("Out=cameraResult+\"\\n\";\n")
+
+	err := driver.sendCommandIgnoreReply(message.String())
+	if err != nil {
+		fmt.Println("CaptureDarkFrame error from driver on starting capture:", err)
+		return err
+	}
+	//fmt.Println("Camera response:", response)
+	return nil
+}
+
+// sendCommandIgnoreReply is an internal method that sends the given command string to the server.
 // This is used for commands where no reply is to be read and processed by the caller
 // (There is a reply from the server, but it is used only to verify successful execution)
 func (driver *TheSkyDriverInstance) sendCommandIgnoreReply(command string) error {
@@ -275,7 +305,7 @@ func (driver *TheSkyDriverInstance) sendCommandFloatReply(command string) (float
 // sendCommandStringReply is an internal method that sends the given command string to the server.
 // This is used for commands where an arbitrary string reply is to be read and processed by the caller
 func (driver *TheSkyDriverInstance) sendCommandStringReply(command string) (string, error) {
-	if driver.verbosity > 2 || driver.debug {
+	if driver.verbosity > 3 || driver.debug {
 		fmt.Println("TheSkyDriverInstance/sendCommandStringReply: ", command)
 	}
 	var message strings.Builder
@@ -347,4 +377,26 @@ func (driver *TheSkyDriverInstance) sendCommand(command string) (string, error) 
 		return responseText, nil
 	}
 	return responseText, errors.New("TheSkyX error: " + errorLine)
+}
+
+// IsCaptureDone polls the server to see if the camera is done with its current activity
+func (driver *TheSkyDriverInstance) IsCaptureDone() (bool, error) {
+	if driver.verbosity > 2 || driver.debug {
+		fmt.Println("TheSkyDriverInstance/IsCaptureDone()")
+	}
+	var message strings.Builder
+	message.WriteString("ccdsoftCamera.Connect();\n")
+	message.WriteString("var complete = ccdsoftCamera.IsExposureComplete;\n")
+	message.WriteString("var Out;\n")
+	message.WriteString("Out=complete+\"\\n\";\n")
+
+	responseString, err := driver.sendCommandStringReply(message.String())
+	if err != nil {
+		fmt.Println("IsCaptureDone error from driver IsExposureComplete:", err)
+		return false, err
+	}
+	if driver.verbosity > 2 || driver.debug {
+		fmt.Println("IsExposureComplete response:", responseString)
+	}
+	return responseString == "1", nil
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"goskydarks/config"
+	"goskydarks/delay"
 	"goskydarks/theSkyX"
 	"sync"
 	"testing"
@@ -36,7 +37,7 @@ func TestCoolForStart(t *testing.T) {
 		}
 		session, err := NewSession(settings)
 		require.Nil(t, err, "Can't create session")
-		mockDelayService := NewMockDelayService(ctrl)
+		mockDelayService := delay.NewMockDelayService(ctrl)
 		session.SetDelayService(mockDelayService)
 		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
@@ -75,7 +76,7 @@ func TestCoolForStart(t *testing.T) {
 		}
 		session, err := NewSession(settings)
 		require.Nil(t, err, "Can't create session")
-		mockDelayService := NewMockDelayService(ctrl)
+		mockDelayService := delay.NewMockDelayService(ctrl)
 		session.SetDelayService(mockDelayService)
 		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
@@ -120,7 +121,7 @@ func TestCoolForStart(t *testing.T) {
 		}
 		session, err := NewSession(settings)
 		require.Nil(t, err, "Can't create session")
-		mockDelayService := NewMockDelayService(ctrl)
+		mockDelayService := delay.NewMockDelayService(ctrl)
 		session.SetDelayService(mockDelayService)
 		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
