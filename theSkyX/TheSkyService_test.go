@@ -42,13 +42,14 @@ func TestDarkCapture(t *testing.T) {
 		const binning = 1
 		const seconds = 20.0
 		const downloadTime = 5.0
+		//	The mock driver will be asked to initiate capture, and this will report success
 		mockDriver.EXPECT().StartDarkFrameCapture(1, seconds, downloadTime).Return(nil)
-		//	Initial delay while waiting for exposure
+		//	Mock the initial delay while waiting for exposure
 		initialDelay := int(math.Round(seconds + downloadTime + AndALittleExtra)) // from service
 		mockDelayService.EXPECT().DelayDuration(initialDelay).Return(initialDelay, nil)
-		//	Extra waits between polls
+		//	Mock extra waits between polls
 		mockDelayService.EXPECT().DelayDuration(1).Return(1, nil).Times(2)
-		//	Report capture not done on first or second check; done on third
+		//	Mock camera status to report capture not done on first or second check; done on third
 		mockDriver.EXPECT().IsCaptureDone().Return(false, nil)
 		mockDriver.EXPECT().IsCaptureDone().Return(false, nil)
 		mockDriver.EXPECT().IsCaptureDone().Return(true, nil)
@@ -65,13 +66,14 @@ func TestDarkCapture(t *testing.T) {
 		const binning = 1
 		const seconds = 20.0
 		const downloadTime = 5.0
+		//	The mock driver will be asked to initiate capture, and this will report success
 		mockDriver.EXPECT().StartDarkFrameCapture(1, seconds, downloadTime).Return(nil)
 		//	Initial delay while waiting for exposure
 		initialDelay := int(math.Round(seconds + downloadTime + AndALittleExtra)) // from service
 		mockDelayService.EXPECT().DelayDuration(initialDelay).Return(initialDelay, nil)
 		//	Extra waits between polls
 		mockDelayService.EXPECT().DelayDuration(1).AnyTimes().Return(1, nil)
-		//	Report capture not done no matter how often we ask
+		//	Report capture not done no matter how often we ask, so the logic will eventually time out
 		mockDriver.EXPECT().IsCaptureDone().AnyTimes().Return(false, nil)
 
 		err := service.CaptureDarkFrame(binning, seconds, downloadTime)
