@@ -137,6 +137,7 @@ func TestCoolForStart(t *testing.T) {
 
 		err = session.CoolForStart(coolingConfig)
 		require.NotNil(t, err, "Expected cooling to fail on timeout")
+		require.ErrorContains(t, err, "timed out")
 
 		err = session.Close()
 		require.Nil(t, err, "Can't close session")

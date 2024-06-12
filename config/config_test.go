@@ -65,6 +65,7 @@ func TestParseStartTime(t *testing.T) {
 	t.Run("missing start time", func(t *testing.T) {
 		useStart, _, err := ParseStartTime(true, "", "")
 		require.NotNil(t, err, "missing start time should have produced an error")
+		require.ErrorContains(t, err, "missing start time")
 		require.False(t, useStart, "missing start time should be parsed as not deferred start")
 	})
 
@@ -72,6 +73,7 @@ func TestParseStartTime(t *testing.T) {
 	t.Run("bad day keyword", func(t *testing.T) {
 		useStart, _, err := ParseStartTime(true, "nonsense", "08:30")
 		require.NotNil(t, err, "Bad date keyword should have produced error")
+		require.ErrorContains(t, err, "cannot parse")
 		require.False(t, useStart, "invalid keyword should not be parsed as a deferred start")
 	})
 
@@ -79,6 +81,7 @@ func TestParseStartTime(t *testing.T) {
 	t.Run("invalid date", func(t *testing.T) {
 		useStart, _, err := ParseStartTime(true, "2024-27-33", "10:00")
 		require.NotNil(t, err, "invalid date should have produced error")
+		require.ErrorContains(t, err, "month out of range")
 		require.False(t, useStart, "invalid date should not be parsed as a deferred start")
 	})
 
@@ -86,18 +89,21 @@ func TestParseStartTime(t *testing.T) {
 	t.Run("invalid time hour", func(t *testing.T) {
 		useStart, _, err := ParseStartTime(true, "today", "47:00")
 		require.NotNil(t, err, "invalid time (hour) should have produced error")
+		require.ErrorContains(t, err, "hour out of range")
 		require.False(t, useStart, "invalid time (hour) should not be parsed as a deferred start")
 	})
 
 	t.Run("invalid time minute", func(t *testing.T) {
 		useStart, _, err := ParseStartTime(true, "today", "17:99")
 		require.NotNil(t, err, "invalid time (minute) should have produced error")
+		require.ErrorContains(t, err, "minute out of range")
 		require.False(t, useStart, "invalid time (minute) should not be parsed as a deferred start")
 	})
 
 	t.Run("invalid time junk string", func(t *testing.T) {
 		useStart, _, err := ParseStartTime(true, "today", "nonsense")
 		require.NotNil(t, err, "invalid time should have produced error")
+		require.ErrorContains(t, err, "cannot parse")
 		require.False(t, useStart, "invalid time should not be parsed as a deferred start")
 	})
 }
