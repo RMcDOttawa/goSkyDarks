@@ -16,12 +16,13 @@ type TheSkyService interface {
 	//	Open and close persistent socket connection to the server
 	Connect(server string, port int) error
 	Close() error
+	SetDriver(driver TheSkyDriver)
 	StartCooling(targetTemp float64) error
 	GetCameraTemperature() (float64, error)
 	StopCooling() error
 	MeasureDownloadTime(binning int) (float64, error)
 	CaptureDarkFrame(binning int, seconds float64, downloadTime float64) error
-	SetDriver(driver TheSkyDriver) // for mocking
+	CaptureBiasFrame(binning int, downloadTime float64) error // for mocking
 }
 
 type TheSkyServiceInstance struct {
@@ -145,7 +146,7 @@ func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds floa
 	}
 	err := service.driver.StartDarkFrameCapture(binning, seconds, downloadTime)
 	if err != nil {
-		fmt.Println("TheSkyServiceInstance/CaptureDarkFrame error from driver:", err)
+		fmt.Println("TheSkyServiceInstance/StartDarkFrameCapture error from driver:", err)
 		return err
 	}
 	//	Now we'll wait until the exposure is probably over - exposure time + download time
@@ -180,6 +181,54 @@ func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds floa
 		}
 		if _, err := service.delayService.DelayDuration(int(math.Round(pollingInterval))); err != nil {
 			fmt.Println("TheSkyServiceInstance/CaptureDarkFrame error from polling delay service:", err)
+			return err
+		}
+		secondsWaitedSoFar += pollingInterval
+	}
+}
+
+func (service *TheSkyServiceInstance) CaptureBiasFrame(binning int, downloadTime float64) error {
+	if service.settings.Verbosity > 2 || service.settings.Debug {
+		fmt.Printf("TheSkyServiceInstance/CaptureBiasFrame(%d, %g) \n", binning, downloadTime)
+	}
+	err := service.driver.StartBiasFrameCapture(binning, downloadTime)
+	if err != nil {
+		fmt.Println("TheSkyServiceInstance/StartBiasFrameCapture error from driver:", err)
+		return err
+	}
+	//	Now we'll wait until the exposure is probably over - exposure time + download time
+	const shortTimeForBiasExposure = 0.1
+	delayUntilComplete := int(math.Round(shortTimeForBiasExposure + downloadTime + AndALittleExtra))
+	if service.settings.Verbosity > 2 {
+		fmt.Println("Exposure started. Waiting for ", delayUntilComplete)
+	}
+	if _, err := service.delayService.DelayDuration(delayUntilComplete); err != nil {
+		fmt.Println("TheSkyServiceInstance/CaptureBiasFrame error from delay service:", err)
+		return err
+	}
+	//	Now we poll the camera repeatedly until it reports done
+	maximumWaitSeconds := (shortTimeForBiasExposure + downloadTime) * timeoutFactor
+	secondsWaitedSoFar := 0.0
+	for {
+		done, err := service.driver.IsCaptureDone()
+		if err != nil {
+			fmt.Println("TheSkyServiceInstance/CaptureBiasFrame error from IsCaptureDone:", err)
+			return err
+		}
+		if done {
+			if service.settings.Verbosity > 2 {
+				fmt.Println("capture is done, returning")
+			}
+			return nil
+		}
+		if secondsWaitedSoFar > maximumWaitSeconds {
+			return errors.New("TheSkyServiceInstance/CaptureBiasFrame: Timeout waiting for capture to finish")
+		}
+		if service.settings.Verbosity > 2 {
+			fmt.Println("Camera not finished. Delaying ", pollingInterval)
+		}
+		if _, err := service.delayService.DelayDuration(int(math.Round(pollingInterval))); err != nil {
+			fmt.Println("TheSkyServiceInstance/CaptureBiasFrame error from polling delay service:", err)
 			return err
 		}
 		secondsWaitedSoFar += pollingInterval

@@ -363,7 +363,7 @@ func (s *Session) captureDarkSet(plan *CapturePlan, key string, set config.DarkS
 	}
 	if plan.DarksDone[key] >= set.Frames {
 		if s.settings.Verbosity > 1 || s.settings.Debug {
-			fmt.Printf("  Already have all %d frames in set %s\n", set.Frames, key)
+			fmt.Printf("  Already have all %d dark frames in set %s\n", set.Frames, key)
 		}
 		return nil
 	}
@@ -371,7 +371,7 @@ func (s *Session) captureDarkSet(plan *CapturePlan, key string, set config.DarkS
 	framesNeeded := set.Frames - plan.DarksDone[key]
 	if framesNeeded > 0 {
 		if s.settings.Verbosity > 1 || s.settings.Debug {
-			fmt.Printf("  Still need %d frames (of %d) in set %s\n", framesNeeded, set.Frames, key)
+			fmt.Printf("  Still need %d dark frames (of %d) in set %s\n", framesNeeded, set.Frames, key)
 		}
 	}
 	frameCount := 0
@@ -406,11 +406,67 @@ func (s *Session) captureDarkSet(plan *CapturePlan, key string, set config.DarkS
 }
 
 func (s *Session) captureBiasFrames(capturePlan *CapturePlan, coolingConfig config.CoolingConfig) error {
-	fmt.Println("captureBiasFrames STUB")
-	fmt.Printf("   Frames required: %v\n", capturePlan.BiasRequired)
-	fmt.Printf("   Frames done: %v\n", capturePlan.BiasDone)
-	fmt.Printf("   Download times: %v\n", capturePlan.DownloadTimes)
-	fmt.Printf("   Cooling config: %v\n", coolingConfig)
+	//fmt.Println("captureBiasFrames ")
+	//fmt.Printf("   Frames required: %v\n", capturePlan.BiasRequired)
+	//fmt.Printf("   Frames done: %v\n", capturePlan.BiasDone)
+	//fmt.Printf("   Download times: %v\n", capturePlan.DownloadTimes)
+	//fmt.Printf("   Cooling config: %v\n", coolingConfig)
+
+	for key, set := range capturePlan.BiasRequired {
+		//fmt.Printf("   Checking bias set %s: %v\n", key, set)
+		if err := s.captureBiasSet(capturePlan, key, set, coolingConfig); err != nil {
+			fmt.Println("Error in Session captureBiasFrames, capturing bias set:", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Session) captureBiasSet(plan *CapturePlan, key string, set config.BiasSet, coolingConfig config.CoolingConfig) error {
+	if s.settings.Verbosity > 0 || s.settings.Debug {
+		fmt.Printf("Handling bias frames set: %d frames  binned %d\n", set.Frames, set.Binning)
+	}
+	if plan.BiasDone[key] >= set.Frames {
+		if s.settings.Verbosity > 1 || s.settings.Debug {
+			fmt.Printf("  Already have all %d bias frames in set %s\n", set.Frames, key)
+		}
+		return nil
+	}
+
+	framesNeeded := set.Frames - plan.BiasDone[key]
+	if framesNeeded > 0 {
+		if s.settings.Verbosity > 1 || s.settings.Debug {
+			fmt.Printf("  Still need %d bias frames (of %d) in set %s\n", framesNeeded, set.Frames, key)
+		}
+	}
+	frameCount := 0
+	for plan.BiasDone[key] < set.Frames {
+		abandon, err := s.CheckAbandonForCooling(coolingConfig)
+		if err != nil {
+			fmt.Println("Error in Session captureBiasSet, checking for cooling abandon:", err)
+			return err
+		}
+		if abandon {
+			const message = "abandoning bias frame capture due to temperature exceeding cooling tolerance"
+			fmt.Println(message)
+			return errors.New(message)
+		}
+
+		frameCount++
+		if s.settings.Verbosity > 1 || s.settings.Debug {
+			fmt.Printf("    Capturing bias frame %d of %d, binned %d\n", frameCount, framesNeeded, set.Binning)
+		}
+
+		if err := s.theSkyService.CaptureBiasFrame(set.Binning, plan.DownloadTimes[set.Binning]); err != nil {
+			fmt.Println("Error in Session captureBiasSet, capturing bias frame:", err)
+			return err
+		}
+		plan.BiasDone[key]++
+		if err := s.stateFileService.SavePlanToFile(plan); err != nil {
+			fmt.Println("Error in Session captureBiasSet, saving plan:", err)
+			return err
+		}
+	}
 	return nil
 }
 

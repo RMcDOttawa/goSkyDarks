@@ -20,8 +20,9 @@ type TheSkyDriver interface {
 	GetCameraTemperature() (float64, error)
 	StopCooling() error
 	MeasureDownloadTime(binning int) (float64, error)
-	StartDarkFrameCapture(binning int, seconds float64, time float64) error
+	StartDarkFrameCapture(binning int, seconds float64, downloadTime float64) error
 	IsCaptureDone() (bool, error)
+	StartBiasFrameCapture(binning int, downloadTime float64) error
 }
 
 type TheSkyDriverInstance struct {
@@ -228,7 +229,7 @@ func (driver *TheSkyDriverInstance) MeasureDownloadTime(binning int) (float64, e
 
 func (driver *TheSkyDriverInstance) StartDarkFrameCapture(binning int, seconds float64, downloadTime float64) error {
 	if driver.verbosity > 2 || driver.debug {
-		fmt.Println("TheSkyDriverInstance/CaptureDarkFrame ", binning, seconds, downloadTime)
+		fmt.Println("TheSkyDriverInstance/StartDarkFrameCapture ", binning, seconds, downloadTime)
 	}
 	var message strings.Builder
 	message.WriteString("ccdsoftCamera.Connect();\n")         // Open camera
@@ -399,4 +400,31 @@ func (driver *TheSkyDriverInstance) IsCaptureDone() (bool, error) {
 		fmt.Println("IsExposureComplete response:", responseString)
 	}
 	return responseString == "1", nil
+}
+
+func (driver *TheSkyDriverInstance) StartBiasFrameCapture(binning int, downloadTime float64) error {
+	if driver.verbosity > 2 || driver.debug {
+		fmt.Println("TheSkyDriverInstance/StartBiasFrameCapture ", binning, downloadTime)
+	}
+	var message strings.Builder
+	message.WriteString("ccdsoftCamera.Connect();\n")         // Open camera
+	message.WriteString("ccdsoftCamera.Autoguider=false;\n")  // Use main camera not autoguider
+	message.WriteString("ccdsoftCamera.Asynchronous=true;\n") // Async (don't wait)
+	message.WriteString("ccdsoftCamera.Frame=2;\n")           // Bias frame
+	message.WriteString("ccdsoftCamera.ImageReduction=0;\n")  // No image reduction
+	message.WriteString("ccdsoftCamera.ToNewWindow=false;\n") // Don't open a new window
+	message.WriteString("ccdsoftCamera.AutoSaveOn=true;\n")   // Save the image to configured location
+	message.WriteString(fmt.Sprintf("ccdsoftCamera.BinX=%d;\n", binning))
+	message.WriteString(fmt.Sprintf("ccdsoftCamera.BinY=%d;\n", binning))
+	message.WriteString("var cameraResult = ccdsoftCamera.TakeImage();\n")
+	message.WriteString("var Out;\n")
+	message.WriteString("Out=cameraResult+\"\\n\";\n")
+
+	err := driver.sendCommandIgnoreReply(message.String())
+	if err != nil {
+		fmt.Println("StartBiasFrameCapture error from driver on starting capture:", err)
+		return err
+	}
+	//fmt.Println("Camera response:", response)
+	return nil
 }

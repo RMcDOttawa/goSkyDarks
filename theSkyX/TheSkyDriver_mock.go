@@ -106,6 +106,20 @@ func (mr *MockTheSkyDriverMockRecorder) MeasureDownloadTime(arg0 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MeasureDownloadTime", reflect.TypeOf((*MockTheSkyDriver)(nil).MeasureDownloadTime), arg0)
 }
 
+// StartBiasFrameCapture mocks base method.
+func (m *MockTheSkyDriver) StartBiasFrameCapture(arg0 int, arg1 float64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartBiasFrameCapture", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartBiasFrameCapture indicates an expected call of StartBiasFrameCapture.
+func (mr *MockTheSkyDriverMockRecorder) StartBiasFrameCapture(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartBiasFrameCapture", reflect.TypeOf((*MockTheSkyDriver)(nil).StartBiasFrameCapture), arg0, arg1)
+}
+
 // StartCooling mocks base method.
 func (m *MockTheSkyDriver) StartCooling(arg0 float64) error {
 	m.ctrl.T.Helper()

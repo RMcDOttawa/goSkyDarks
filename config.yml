@@ -1,5 +1,5 @@
 ---
-verbosity:    2              # default 1
+verbosity:   2               # default 1
 debug: false
 stateFile:  "./stateFile.state"
 cooling:
@@ -26,14 +26,14 @@ biasframes:
         binning: 2
 darkframes:
   -  darkset:
-       frames:  3
+       frames:  8
        seconds: 10
        binning: 1
   -  darkset:
-       frames:  3
+       frames:  8
        seconds: 15
        binning: 2
   -  darkset:
-       frames:  3
+       frames:  8
        seconds: 20
        binning: 1

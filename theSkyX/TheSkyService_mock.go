@@ -33,6 +33,20 @@ func (m *MockTheSkyService) EXPECT() *MockTheSkyServiceMockRecorder {
 	return m.recorder
 }
 
+// CaptureBiasFrame mocks base method.
+func (m *MockTheSkyService) CaptureBiasFrame(arg0 int, arg1 float64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CaptureBiasFrame", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CaptureBiasFrame indicates an expected call of CaptureBiasFrame.
+func (mr *MockTheSkyServiceMockRecorder) CaptureBiasFrame(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CaptureBiasFrame", reflect.TypeOf((*MockTheSkyService)(nil).CaptureBiasFrame), arg0, arg1)
+}
+
 // CaptureDarkFrame mocks base method.
 func (m *MockTheSkyService) CaptureDarkFrame(arg0 int, arg1, arg2 float64) error {
 	m.ctrl.T.Helper()
