@@ -105,6 +105,18 @@ func (mr *MockTheSkyServiceMockRecorder) MeasureDownloadTime(arg0 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MeasureDownloadTime", reflect.TypeOf((*MockTheSkyService)(nil).MeasureDownloadTime), arg0)
 }
 
+// SetDriver mocks base method.
+func (m *MockTheSkyService) SetDriver(arg0 TheSkyDriver) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetDriver", arg0)
+}
+
+// SetDriver indicates an expected call of SetDriver.
+func (mr *MockTheSkyServiceMockRecorder) SetDriver(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDriver", reflect.TypeOf((*MockTheSkyService)(nil).SetDriver), arg0)
+}
+
 // StartCooling mocks base method.
 func (m *MockTheSkyService) StartCooling(arg0 float64) error {
 	m.ctrl.T.Helper()

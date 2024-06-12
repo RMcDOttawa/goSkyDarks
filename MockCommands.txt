@@ -1,3 +1,5 @@
 mockgen -destination=StateFileService_mock.go -package=session . StateFileService
 
 mockgen -destination=TheSkyService_mock.go -package=theSkyX . TheSkyService
+
+mockgen -destination=TheSkyDriver_mock.go -package=theSkyX . TheSkyDriver

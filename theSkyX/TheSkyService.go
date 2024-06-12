@@ -21,6 +21,7 @@ type TheSkyService interface {
 	StopCooling() error
 	MeasureDownloadTime(binning int) (float64, error)
 	CaptureDarkFrame(binning int, seconds float64, downloadTime float64) error
+	SetDriver(driver TheSkyDriver) // for mocking
 }
 
 type TheSkyServiceInstance struct {
@@ -28,6 +29,10 @@ type TheSkyServiceInstance struct {
 	driver       TheSkyDriver
 	isOpen       bool
 	delayService delay.DelayService
+}
+
+func (service *TheSkyServiceInstance) SetDriver(driver TheSkyDriver) {
+	service.driver = driver
 }
 
 // NewTheSkyService is the constructor for the instance of this service
@@ -130,7 +135,7 @@ func (service *TheSkyServiceInstance) MeasureDownloadTime(binning int) (float64,
 	return time, nil
 }
 
-const andALittleExtra = 0.5
+const AndALittleExtra = 0.5
 const pollingInterval = 1.0 //	seconds between polls
 const timeoutFactor = 5.0   // How much longer to wait than the exposure time
 
@@ -144,7 +149,7 @@ func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds floa
 		return err
 	}
 	//	Now we'll wait until the exposure is probably over - exposure time + download time
-	delayUntilComplete := int(math.Round(seconds + downloadTime + andALittleExtra))
+	delayUntilComplete := int(math.Round(seconds + downloadTime + AndALittleExtra))
 	if service.settings.Verbosity > 2 {
 		fmt.Println("Exposure started. Waiting for ", delayUntilComplete)
 	}
