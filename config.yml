@@ -1,5 +1,5 @@
 ---
-verbosity:   5         # 0 (silent) to 5 (very chatty)
+verbosity:   1         # 0 (silent) to 5 (very chatty)
 debug: false
 stateFile:  "./stateFile.state"
 cooling:

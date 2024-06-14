@@ -4,7 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 	"goskydarks/config"
 )
@@ -22,6 +21,5 @@ func RunValidateCommand(_ *cobra.Command, _ []string) {
 }
 
 func init() {
-	fmt.Println("Validate Init")
 	rootCmd.AddCommand(validateCmd)
 }

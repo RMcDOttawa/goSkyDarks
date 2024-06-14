@@ -4,7 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +20,6 @@ var statusCmd = &cobra.Command{
 }
 
 func init() {
-	fmt.Println("Status Init")
 	rootCmd.AddCommand(statusCmd)
 
 	// Here you will define your flags and configuration settings.

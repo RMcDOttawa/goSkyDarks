@@ -18,6 +18,7 @@ type SettingsType struct {
 	Server       ServerConfig
 	BiasFrames   []string
 	DarkFrames   []string
+	ClearDone    bool // clear the "done" counts in the state file
 }
 
 // CoolingConfig is configuration about use the cameras cooler
@@ -64,6 +65,7 @@ const ServerAddressSetting = "Server.Address"
 const ServerPortSetting = "Server.Port"
 const BiasFramesSetting = "BiasFrames"
 const DarkFramesSetting = "DarkFrames"
+const ClearDoneSetting = "ClearDone"
 
 func ShowAllSettings() {
 	fmt.Println("Validating and displaying all config settings:")
@@ -74,6 +76,7 @@ func ShowAllSettings() {
 	fmt.Printf("   Verbosity: %d\n", viper.GetInt(VerbositySetting))
 	fmt.Printf("   Debug: %t\n", viper.GetBool(DebugSetting))
 	fmt.Printf("   State File Path: %s\n", viper.GetString(StateFileSetting))
+	fmt.Printf("   Clear \"done\" counts: %t\n", viper.GetBool(ClearDoneSetting))
 
 	//	Server settings
 	fmt.Println("Server settings")

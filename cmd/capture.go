@@ -101,7 +101,6 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 }
 
 func validateDarkFrames(frameStrings []string) error {
-	fmt.Println("\n***\nValidating dark frames:", frameStrings)
 	for _, frameString := range frameStrings {
 		_, _, _, err := config.ParseDarkSet(frameString)
 		if err != nil {
@@ -112,7 +111,6 @@ func validateDarkFrames(frameStrings []string) error {
 }
 
 func validateBiasFrames(frameStrings []string) error {
-	fmt.Println("\n***\nValidating bias frames STUB:", frameStrings)
 	for _, frameString := range frameStrings {
 		_, _, err := config.ParseBiasSet(frameString)
 		if err != nil {
@@ -124,7 +122,6 @@ func validateBiasFrames(frameStrings []string) error {
 
 // func
 func init() {
-	fmt.Println("Capture Init")
 	rootCmd.AddCommand(captureCmd)
 
 }

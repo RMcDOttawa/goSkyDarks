@@ -66,7 +66,6 @@ func Execute() {
 }
 
 func init() {
-	fmt.Println("Root Init")
 	rootCmd.Root().CompletionOptions.DisableDefaultCmd = true
 
 	Settings = &config.SettingsType{}
@@ -138,6 +137,9 @@ func defineFramesFlags(_ *cobra.Command) {
 
 	captureCmd.Flags().StringArrayVarP(&Settings.DarkFrames, "dark", "d", []string{}, "Dark frame \"count,seconds,binning\" - can repeat multiple times")
 	_ = viper.BindPFlag(config.DarkFramesSetting, captureCmd.Flags().Lookup("dark"))
+
+	captureCmd.Flags().BoolVarP(&Settings.ClearDone, "cleardone", "", false, "Clear done counts in state file, start from zero")
+	_ = viper.BindPFlag(config.ClearDoneSetting, captureCmd.Flags().Lookup("cleardone"))
 
 }
 
