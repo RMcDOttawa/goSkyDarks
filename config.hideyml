@@ -1,6 +1,6 @@
 ---
 verbosity:   5         # 0 (silent) to 5 (very chatty)
-debug: true
+debug: false
 stateFile:  "./stateFile.state"
 cooling:
     useCooler:        false     # Use camera's cooler?
@@ -24,3 +24,7 @@ biasframes:     # List of strings "number,binning"
 darkframes:     # List of strings "number,exposure,binning"
     - "2,6,1"
     - "2,8,2"
+
+
+
+

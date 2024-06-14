@@ -288,7 +288,7 @@ func (s *Session) createPlanFromConfig(biasSets []string, darkSets []string) (*C
 		if verbosity > 2 {
 			fmt.Printf("Session/createPlanFromConfig processing dark set: %s\n", darkSet)
 		}
-		count, exposure, binning, err := ParseDarkSet(darkSet)
+		count, exposure, binning, err := config.ParseDarkSet(darkSet)
 		if err != nil {
 			fmt.Printf("Error in Session createPlanFromConfig, parsing dark set %s: %s\n:", darkSet, err)
 			return nil, err
@@ -306,7 +306,7 @@ func (s *Session) createPlanFromConfig(biasSets []string, darkSets []string) (*C
 		if verbosity > 2 {
 			fmt.Printf("Session/createPlanFromConfig processing bias set: %s\n", biasSet)
 		}
-		count, binning, err := ParseBiasSet(biasSet)
+		count, binning, err := config.ParseBiasSet(biasSet)
 		if err != nil {
 			fmt.Printf("Error in Session createPlanFromConfig, parsing bias set %s: %s\n", biasSet, err)
 			return nil, err
@@ -393,7 +393,7 @@ func (s *Session) captureDarkSet(plan *CapturePlan, set string) error {
 	if verbosity > 0 || debug {
 		fmt.Printf("Handling dark frames set: %s\n", set)
 	}
-	count, exposure, binning, err := ParseDarkSet(set)
+	count, exposure, binning, err := config.ParseDarkSet(set)
 	if err != nil {
 		fmt.Println("Error in Session captureDarkSet, parsing dark set:", err)
 		return err
@@ -463,7 +463,7 @@ func (s *Session) captureBiasFrames(capturePlan *CapturePlan) error {
 func (s *Session) captureBiasSet(plan *CapturePlan, set string) error {
 	verbosity := viper.GetInt(config.VerbositySetting)
 	debug := viper.GetBool(config.DebugSetting)
-	count, binning, err := ParseBiasSet(set)
+	count, binning, err := config.ParseBiasSet(set)
 	if err != nil {
 		fmt.Println("Error in Session captureBiasSet, parsing bias set:", err)
 		return err

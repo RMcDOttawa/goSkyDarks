@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var Settings *config.SettingsTypeRename
+var Settings *config.SettingsType
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -66,15 +66,43 @@ func Execute() {
 }
 
 func init() {
+	fmt.Println("Root Init")
 	rootCmd.Root().CompletionOptions.DisableDefaultCmd = true
 
-	Settings = &config.SettingsTypeRename{}
+	Settings = &config.SettingsType{}
 
+	defineGlobalSettings()
+	defineCaptureSettings()
+	readConfigFile()
+
+}
+
+func defineGlobalSettings() {
+	rootCmd.PersistentFlags().BoolVarP(&Settings.Debug, "debug", "d", false, "Display debugging output in the console. (default: false)")
+	_ = viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
+
+	rootCmd.PersistentFlags().IntVarP(&Settings.Verbosity, "verbosity", "v", 1, "Set the verbosity level from 0 to 5. (default: 0)")
+	_ = viper.BindPFlag("verbosity", rootCmd.PersistentFlags().Lookup("verbosity"))
+
+	rootCmd.PersistentFlags().StringVarP(&Settings.StateFile, "statefile", "", "./stateFile.state", "State file to store session status")
+	_ = viper.BindPFlag("statefile", rootCmd.PersistentFlags().Lookup("statefile"))
+
+	rootCmd.PersistentFlags().BoolVarP(&Settings.ShowSettings, "showsettings", "", false, "show settings")
+	_ = viper.BindPFlag("showsettings", rootCmd.PersistentFlags().Lookup("showsettings"))
+
+}
+
+func readConfigFile() {
 	//	Read config settings from config file
 	viper.SetConfigName("config")
 	viper.SetConfigType("yml")
 	viper.AddConfigPath(".")
 	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			//	No config file is not an error. Just mention it and then leave
+			fmt.Println("No config.yml file found")
+			return
+		}
 		fmt.Println("Error reading config:", err)
 		os.Exit(1)
 	}
@@ -91,12 +119,75 @@ func init() {
 		fmt.Println("Error validating global settings:", err)
 		os.Exit(1)
 	}
+}
+
+func defineCaptureSettings() {
+	captureCmd := findCommand(rootCmd, "capture")
+
+	defineServerFlags(captureCmd)
+	defineStartDelayFlags(captureCmd)
+	defineCoolingFlags(captureCmd)
+	defineFramesFlags(captureCmd)
 
 }
 
-//func DisplayFlags() {
-//	fmt.Println("All program config settings:")
-//	for k, v := range viper.AllSettings() {
-//		fmt.Printf("   %s: %v\n", k, v)
-//	}
-//}
+func defineFramesFlags(_ *cobra.Command) {
+
+}
+
+func defineServerFlags(captureCmd *cobra.Command) {
+
+	captureCmd.Flags().StringVarP(&Settings.Server.Address, "server", "", "localhost", "Server address")
+	_ = viper.BindPFlag(config.ServerAddressSetting, captureCmd.Flags().Lookup("server"))
+
+	captureCmd.Flags().IntVarP(&Settings.Server.Port, "port", "", 3040, "Server port number")
+	_ = viper.BindPFlag(config.ServerPortSetting, captureCmd.Flags().Lookup("port"))
+
+}
+
+func defineStartDelayFlags(captureCmd *cobra.Command) {
+
+	captureCmd.Flags().BoolVarP(&Settings.Start.Delay, "delaystart", "", false, "Delay start until later")
+	_ = viper.BindPFlag(config.StartDelaySetting, captureCmd.Flags().Lookup("delaystart"))
+
+	captureCmd.Flags().StringVarP(&Settings.Start.Day, "startday", "", "today", "Delay start until what day (today, tomorrow, or yyyy-mm-dd)")
+	_ = viper.BindPFlag(config.StartDaySetting, captureCmd.Flags().Lookup("startday"))
+
+	captureCmd.Flags().StringVarP(&Settings.Start.Time, "starttime", "", "", "Delay start until what time (\"HH:MM\" 24-hour format)")
+	_ = viper.BindPFlag(config.StartTimeSetting, captureCmd.Flags().Lookup("starttime"))
+
+}
+
+func defineCoolingFlags(captureCmd *cobra.Command) {
+
+	captureCmd.Flags().BoolVarP(&Settings.Cooling.UseCooler, "usecooler", "", false, "Use camera cooler")
+	_ = viper.BindPFlag(config.UseCoolerSetting, captureCmd.Flags().Lookup("usecooler"))
+
+	captureCmd.Flags().Float64VarP(&Settings.Cooling.CoolTo, "coolto", "t", 0.0, "Camera target temperature")
+	_ = viper.BindPFlag(config.CoolToSetting, captureCmd.Flags().Lookup("coolto"))
+
+	captureCmd.Flags().Float64VarP(&Settings.Cooling.CoolStartTol, "coolstarttol", "", 2.0, "Cooling start tolerance")
+	_ = viper.BindPFlag(config.CoolStartTolSetting, captureCmd.Flags().Lookup("coolstarttol"))
+
+	captureCmd.Flags().IntVarP(&Settings.Cooling.CoolWaitMinutes, "coolwaitminutes", "", 30, "Cooling maximum wait time")
+	_ = viper.BindPFlag(config.CoolWaitMinutesSetting, captureCmd.Flags().Lookup("coolwaitminutes"))
+
+	captureCmd.Flags().BoolVarP(&Settings.Cooling.AbortOnCooling, "abortoncooling", "", false, "Abort capture if cooling is outside tolerance")
+	_ = viper.BindPFlag(config.AbortOnCoolingSetting, captureCmd.Flags().Lookup("abortoncooling"))
+
+	captureCmd.Flags().Float64VarP(&Settings.Cooling.CoolAbortTol, "coolaborttol", "", 2.0, "Cooling abort tolerance")
+	_ = viper.BindPFlag(config.CoolAbortTolSetting, captureCmd.Flags().Lookup("coolaborttol"))
+
+	captureCmd.Flags().BoolVarP(&Settings.Cooling.OffAtEnd, "coolingoffafter", "", false, "Cooling off after capture complete")
+	_ = viper.BindPFlag(config.CoolerOffAtEndSetting, captureCmd.Flags().Lookup("coolingoffafter"))
+}
+
+func findCommand(rootCmd *cobra.Command, name string) *cobra.Command {
+	commands := rootCmd.Commands()
+	for _, cmd := range commands {
+		if cmd.Name() == name {
+			return cmd
+		}
+	}
+	return nil
+}

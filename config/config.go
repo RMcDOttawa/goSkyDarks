@@ -8,15 +8,16 @@ import (
 	"time"
 )
 
-type SettingsTypeRename struct {
-	Verbosity  int
-	Debug      bool
-	StateFile  string //	Path to state file
-	Cooling    CoolingConfig
-	Start      StartConfig
-	Server     ServerConfig
-	BiasFrames []string
-	DarkFrames []string
+type SettingsType struct {
+	Verbosity    int
+	Debug        bool
+	StateFile    string //	Path to state file
+	ShowSettings bool
+	Cooling      CoolingConfig
+	Start        StartConfig
+	Server       ServerConfig
+	BiasFrames   []string
+	DarkFrames   []string
 }
 
 // CoolingConfig is configuration about use the cameras cooler
@@ -48,6 +49,7 @@ type ServerConfig struct {
 const VerbositySetting = "verbosity"
 const DebugSetting = "debug"
 const StateFileSetting = "statefile"
+const ShowSettingsSetting = "ShowSettings"
 const UseCoolerSetting = "Cooling.UseCooler"
 const CoolToSetting = "Cooling.CoolTo"
 const CoolStartTolSetting = "Cooling.CoolStartTol"
@@ -62,6 +64,65 @@ const ServerAddressSetting = "Server.Address"
 const ServerPortSetting = "Server.Port"
 const BiasFramesSetting = "BiasFrames"
 const DarkFramesSetting = "DarkFrames"
+
+func ShowAllSettings() {
+	fmt.Println("Validating and displaying all config settings:")
+
+	//	Global settings
+	fmt.Println("Global settings")
+	fmt.Printf("   Show Settings: %t\n", viper.GetBool(ShowSettingsSetting))
+	fmt.Printf("   Verbosity: %d\n", viper.GetInt(VerbositySetting))
+	fmt.Printf("   Debug: %t\n", viper.GetBool(DebugSetting))
+	fmt.Printf("   State File Path: %s\n", viper.GetString(StateFileSetting))
+
+	//	Server settings
+	fmt.Println("Server settings")
+	fmt.Printf("   Address: %s\n", viper.GetString(ServerAddressSetting))
+	fmt.Printf("   Port: %d\n", viper.GetInt(ServerPortSetting))
+
+	//	Start time
+	fmt.Println("Delayed Start settings")
+	fmt.Printf("   Delay: %t\n", viper.GetBool(StartDelaySetting))
+	fmt.Printf("   Day: %s\n", viper.GetString(StartDaySetting))
+	fmt.Printf("   Time: %s\n", viper.GetString(StartTimeSetting))
+	delay, start, err := ParseStart()
+	if err != nil {
+		fmt.Printf("Error parsing start settings: %s\n", err)
+	}
+	fmt.Printf("   Converted to: %t, %v\n", delay, start)
+
+	//	Cooling info
+	fmt.Println("Cooling settings")
+	fmt.Printf("   Use cooler: %t\n", viper.GetBool(UseCoolerSetting))
+	fmt.Printf("   Cool to: %g degrees\n", viper.GetFloat64(CoolToSetting))
+	fmt.Printf("   Start tolerance: %g degrees\n", viper.GetFloat64(CoolStartTolSetting))
+	fmt.Printf("   Wait maximum: %d minutes\n", viper.GetInt(CoolWaitMinutesSetting))
+	fmt.Printf("   Abort if cooling outside tolerance: %t\n", viper.GetBool(AbortOnCoolingSetting))
+	fmt.Printf("   Abort tolerance: %g degrees\n", viper.GetFloat64(CoolAbortTolSetting))
+	fmt.Printf("   Turn off cooler at end of session: %t\n", viper.GetBool(CoolerOffAtEndSetting))
+
+	//	Bias Frames
+	fmt.Println("Bias Frames")
+	for _, frameSetString := range viper.GetStringSlice(BiasFramesSetting) {
+		count, binning, err := ParseBiasSet(frameSetString)
+		if err != nil {
+			fmt.Println("   Syntax error in set:", frameSetString)
+		} else {
+			fmt.Printf("   %d bias frames at %d x %d binning\n", count, binning, binning)
+		}
+	}
+
+	//	Dark Frames
+	fmt.Println("Dark Frames")
+	for _, frameSetString := range viper.GetStringSlice(DarkFramesSetting) {
+		count, exposure, binning, err := ParseDarkSet(frameSetString)
+		if err != nil {
+			fmt.Println("   Syntax error in set:", frameSetString)
+		} else {
+			fmt.Printf("   %d dark frames of %.2f seconds at %d x %d binning\n", count, exposure, binning, binning)
+		}
+	}
+}
 
 // ValidateGlobals validates any global settings
 func ValidateGlobals() error {

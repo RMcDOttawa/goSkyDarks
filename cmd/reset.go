@@ -4,6 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +21,7 @@ var resetCmd = &cobra.Command{
 }
 
 func init() {
+	fmt.Println("Reset Init")
 	rootCmd.AddCommand(resetCmd)
 
 	// Here you will define your flags and configuration settings.

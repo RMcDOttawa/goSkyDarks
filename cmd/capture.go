@@ -23,6 +23,9 @@ Use the RESET command to prevent this and start over.
 Note the config file allows the capture to be deferred until later - e.g. after dark when it is cooler.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		if viper.GetBool(config.ShowSettingsSetting) {
+			config.ShowAllSettings()
+		}
 		//	State file is mandatory when doing a capture
 		if viper.GetString(config.StateFileSetting) == "" {
 			_, _ = fmt.Fprintln(os.Stderr, "State file is required for capture")
@@ -100,7 +103,7 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 func validateDarkFrames(frameStrings []string) error {
 	fmt.Println("\n***\nValidating dark frames:", frameStrings)
 	for _, frameString := range frameStrings {
-		_, _, _, err := session.ParseDarkSet(frameString)
+		_, _, _, err := config.ParseDarkSet(frameString)
 		if err != nil {
 			return err
 		}
@@ -111,7 +114,7 @@ func validateDarkFrames(frameStrings []string) error {
 func validateBiasFrames(frameStrings []string) error {
 	fmt.Println("\n***\nValidating bias frames STUB:", frameStrings)
 	for _, frameString := range frameStrings {
-		_, _, err := session.ParseBiasSet(frameString)
+		_, _, err := config.ParseBiasSet(frameString)
 		if err != nil {
 			return err
 		}
@@ -121,6 +124,7 @@ func validateBiasFrames(frameStrings []string) error {
 
 // func
 func init() {
+	fmt.Println("Capture Init")
 	rootCmd.AddCommand(captureCmd)
 
 }
