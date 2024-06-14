@@ -78,7 +78,7 @@ func init() {
 }
 
 func defineGlobalSettings() {
-	rootCmd.PersistentFlags().BoolVarP(&Settings.Debug, "debug", "d", false, "Display debugging output in the console. (default: false)")
+	rootCmd.PersistentFlags().BoolVarP(&Settings.Debug, "debug", "", false, "Display debugging output in the console. (default: false)")
 	_ = viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
 
 	rootCmd.PersistentFlags().IntVarP(&Settings.Verbosity, "verbosity", "v", 1, "Set the verbosity level from 0 to 5. (default: 0)")
@@ -132,6 +132,12 @@ func defineCaptureSettings() {
 }
 
 func defineFramesFlags(_ *cobra.Command) {
+
+	captureCmd.Flags().StringArrayVarP(&Settings.BiasFrames, "bias", "b", []string{}, "Bias frame \"count,binning\" - can repeat multiple times")
+	_ = viper.BindPFlag(config.BiasFramesSetting, captureCmd.Flags().Lookup("bias"))
+
+	captureCmd.Flags().StringArrayVarP(&Settings.DarkFrames, "dark", "d", []string{}, "Dark frame \"count,seconds,binning\" - can repeat multiple times")
+	_ = viper.BindPFlag(config.DarkFramesSetting, captureCmd.Flags().Lookup("dark"))
 
 }
 
