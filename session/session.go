@@ -3,6 +3,7 @@ package session
 import (
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"goskydarks/config"
 	"goskydarks/delay"
 	"goskydarks/theSkyX"
@@ -14,22 +15,19 @@ import (
 // such as start time or resuming from saved state
 type Session struct {
 	delayService     delay.DelayService //	Used to delay start; replace with mock for testing
-	settings         config.SettingsType
 	theSkyService    theSkyX.TheSkyService
 	stateFileService StateFileService
 	isConnected      bool
 }
 
-func NewSession(settings config.SettingsType) (*Session, error) {
-	concreteDelayService := delay.NewDelayService(settings)
+func NewSession() (*Session, error) {
+	concreteDelayService := delay.NewDelayService()
 	tsxService := theSkyX.NewTheSkyService(
-		settings,
 		concreteDelayService,
 	)
-	stateFileService := NewStateFileService(settings.StateFile)
+	stateFileService := NewStateFileService(viper.GetString(config.StateFileSetting))
 	session := &Session{
 		delayService:     concreteDelayService,
-		settings:         settings,
 		theSkyService:    tsxService,
 		stateFileService: stateFileService,
 	}
@@ -45,8 +43,8 @@ func NewSession(settings config.SettingsType) (*Session, error) {
 // The download time is a linear function of the file size, which is a linear function of the binning factor,
 // so we will just keep a measure for each binning level
 type CapturePlan struct {
-	DarksRequired map[string]config.DarkSet
-	BiasRequired  map[string]config.BiasSet
+	DarksRequired []string
+	BiasRequired  []string
 	DarksDone     map[string]int
 	BiasDone      map[string]int
 	DownloadTimes map[int]float64 // seconds, indexed by binning
@@ -79,13 +77,14 @@ func (s *Session) DelayStart(startTime time.Time) error {
 
 // ConnectToServer opens the connection to the high-level communication service, keeping
 // it open for subsequent use
-func (s *Session) ConnectToServer(server config.ServerConfig) error {
+func (s *Session) ConnectToServer() error {
 	if s.isConnected {
 		fmt.Println("Session already connected")
 		return nil
 	}
 
-	if err := s.theSkyService.Connect(server.Address, server.Port); err != nil {
+	if err := s.theSkyService.Connect(viper.GetString(config.ServerAddressSetting),
+		viper.GetInt(config.ServerPortSetting)); err != nil {
 		fmt.Println("Error in Session ConnectToServer:", err)
 		return err
 	}
@@ -116,17 +115,19 @@ func (s *Session) Close() error {
 
 // CoolForStart turns on the camera cooler, if requested, and waits up to a maximum
 // amount of time for the camera to reach the specified target temperature
-func (s *Session) CoolForStart(cooling config.CoolingConfig) error {
-	if s.settings.Verbosity > 2 || s.settings.Debug {
-		fmt.Printf("Session/CoolForStart entered: %#v\n", cooling)
+func (s *Session) CoolForStart() error {
+	verbosity := viper.GetInt(config.VerbositySetting)
+	debug := viper.GetBool(config.DebugSetting)
+	if verbosity > 2 || debug {
+		fmt.Printf("Session/CoolForStart entered\n")
 	}
 	//	Is the session open?
 	if !s.isConnected {
 		return errors.New("session not connected")
 	}
 	//	See if we are being asked to cool the camera at all
-	if !cooling.UseCooler {
-		if s.settings.Verbosity > 2 || s.settings.Debug {
+	if !viper.GetBool(config.UseCoolerSetting) {
+		if verbosity > 2 || debug {
 			fmt.Println("UseCooling is not on, so nothing to do")
 			return nil
 		}
@@ -134,14 +135,17 @@ func (s *Session) CoolForStart(cooling config.CoolingConfig) error {
 	//	Cooling is requested.
 	//	Start the cooler and set the target temperature
 
-	if err := s.theSkyService.StartCooling(cooling.CoolTo); err != nil {
+	coolTo := viper.GetFloat64(config.CoolToSetting)
+	if err := s.theSkyService.StartCooling(coolTo); err != nil {
 		fmt.Println("Error in Session CoolForStart, starting cooler:", err)
 		return err
 	}
 
 	//	Wait until target temperature reached or time-out (too warm, can't cool that far)
 
-	if err := s.waitForTargetTemperature(cooling.CoolTo, cooling.CoolStartTol, cooling.CoolWaitMinutes); err != nil {
+	if err := s.waitForTargetTemperature(coolTo,
+		viper.GetFloat64(config.CoolStartTolSetting),
+		viper.GetInt(config.CoolWaitMinutesSetting)); err != nil {
 		fmt.Println("Error in Session CoolForStart, waiting for cooler:", err)
 		return err
 	}
@@ -154,7 +158,9 @@ func (s *Session) CoolForStart(cooling config.CoolingConfig) error {
 //		1. Success: the camera temperature is within the given tolerance of the target temperature
 //		2. Failure: we have waited a specified maximum number of minutes and still haven't reached target
 func (s *Session) waitForTargetTemperature(target float64, tolerance float64, maximumMinutes int) error {
-	if s.settings.Verbosity > 2 || s.settings.Debug {
+	verbosity := viper.GetInt(config.VerbositySetting)
+	debug := viper.GetBool(config.DebugSetting)
+	if verbosity > 2 || debug {
 		fmt.Printf("Session/waitForTargetTemperature entered, to %g tol %g max wait %d\n", target, tolerance, maximumMinutes)
 	}
 	secondsElapsed := 0
@@ -173,7 +179,7 @@ func (s *Session) waitForTargetTemperature(target float64, tolerance float64, ma
 			return err
 		}
 		if math.Abs(currentTemperature-target) <= tolerance {
-			if s.settings.Verbosity > 2 || s.settings.Debug {
+			if verbosity > 2 {
 				fmt.Printf("Current temperature %g is within tolerance %g of target %g\n", currentTemperature, tolerance, target)
 			}
 			return nil
@@ -190,9 +196,8 @@ func (s *Session) waitForTargetTemperature(target float64, tolerance float64, ma
 // completed, that session is continued.  So the given bias and dark list represents the
 // total set of frames wanted - not necessarily the captures that will be done on this call
 func (s *Session) CaptureFrames(
-	biasSets []config.BiasSet,
-	darkSets []config.DarkSet,
-	coolingConfig config.CoolingConfig) error {
+	biasFrames []string,
+	darkFrames []string) error {
 
 	//	Is the session open?
 	if !s.isConnected {
@@ -200,7 +205,7 @@ func (s *Session) CaptureFrames(
 	}
 
 	//  Get plan for captures needed, including state of what is already done
-	capturePlan, err := s.getCapturePlan(biasSets, darkSets)
+	capturePlan, err := s.getCapturePlan(biasFrames, darkFrames)
 	if err != nil {
 		fmt.Println("Error in Session CaptureFrames, getting capture plan:", err)
 		return err
@@ -213,7 +218,7 @@ func (s *Session) CaptureFrames(
 	}
 
 	//	Capture frames as needed
-	if err := s.captureFrames(capturePlan, coolingConfig); err != nil {
+	if err := s.captureFrames(capturePlan); err != nil {
 		fmt.Println("Error in Session capturing frames")
 		return err
 	}
@@ -227,13 +232,13 @@ func (s *Session) CaptureFrames(
 	return nil
 }
 
-func (s *Session) StopCooling(cooling config.CoolingConfig) error {
-	if cooling.UseCooler && cooling.OffAtEnd {
+func (s *Session) StopCooling() error {
+	if viper.GetBool(config.UseCoolerSetting) && viper.GetBool(config.CoolerOffAtEndSetting) {
 		if err := s.theSkyService.StopCooling(); err != nil {
 			fmt.Println("Error in Session StopCooling:", err)
 			return err
 		}
-		if s.settings.Verbosity > 1 || s.settings.Debug {
+		if viper.GetInt(config.VerbositySetting) > 1 {
 			fmt.Printf("Cooling switched off at end of session")
 		}
 	}
@@ -246,13 +251,16 @@ func (s *Session) StopCooling(cooling config.CoolingConfig) error {
 //	the state file.
 //	If the state file includes captures not in the current config, we ignore them - we are using only the "how many frames are done"
 //	info from the state file, plus the download times for each binning level that may be recorded
-func (s *Session) getCapturePlan(biasSets []config.BiasSet, darkSets []config.DarkSet) (*CapturePlan, error) {
-	//fmt.Println("getCapturePlan ")
-	//fmt.Println("  bias sets:", biasSets)
-	//fmt.Println("  dark sets:", darkSets)
-	//fmt.Println("  state file:", stateFilePath)
-	capturePlan := s.createPlanFromConfig(biasSets, darkSets)
-	err := s.stateFileService.UpdatePlanFromFile(capturePlan)
+func (s *Session) getCapturePlan(biasFrames []string, darkFrames []string) (*CapturePlan, error) {
+	fmt.Println("getCapturePlan ")
+	fmt.Println("  bias sets:", biasFrames)
+	fmt.Println("  dark sets:", darkFrames)
+	capturePlan, err := s.createPlanFromConfig(biasFrames, darkFrames)
+	if err != nil {
+		fmt.Println("error in Session getCapturePlan, creating plan from config:", err)
+		return nil, err
+	}
+	err = s.stateFileService.UpdatePlanFromFile(capturePlan)
 	if err != nil {
 		fmt.Println("Error in Session getCapturePlan, updating plan from state file:", err)
 		return nil, err
@@ -260,57 +268,76 @@ func (s *Session) getCapturePlan(biasSets []config.BiasSet, darkSets []config.Da
 	return capturePlan, nil
 }
 
-func (s *Session) createPlanFromConfig(biasSets []config.BiasSet, darkSets []config.DarkSet) *CapturePlan {
+func (s *Session) createPlanFromConfig(biasSets []string, darkSets []string) (*CapturePlan, error) {
 	//fmt.Println("createPlanFromConfig STUB")
 	//fmt.Println("  bias sets:", biasSets)
 	//fmt.Println("  dark sets:", darkSets)
+	verbosity := viper.GetInt(config.VerbositySetting)
 	capturePlan := CapturePlan{}
-	//	Create the empty maps
-	capturePlan.DarksRequired = make(map[string]config.DarkSet)
-	capturePlan.BiasRequired = make(map[string]config.BiasSet)
+
+	capturePlan.DarksRequired = darkSets
+	capturePlan.BiasRequired = biasSets
+
+	//	Create the empty maps for what is done and download time
 	capturePlan.DarksDone = make(map[string]int)
 	capturePlan.BiasDone = make(map[string]int)
 	capturePlan.DownloadTimes = make(map[int]float64)
 
-	//	Initialize the settings for every dark frame set needed
+	//	Create a DownloadTime entry and zero the "done" count for every dark set
 	for _, darkSet := range darkSets {
-		key := MakeDarkKey(darkSet)
-		capturePlan.DarksRequired[key] = darkSet
+		if verbosity > 2 {
+			fmt.Printf("Session/createPlanFromConfig processing dark set: %s\n", darkSet)
+		}
+		count, exposure, binning, err := ParseDarkSet(darkSet)
+		if err != nil {
+			fmt.Printf("Error in Session createPlanFromConfig, parsing dark set %s: %s\n:", darkSet, err)
+			return nil, err
+		}
+		key := MakeDarkKey(count, exposure, binning)
 		capturePlan.DarksDone[key] = 0
-		_, ok := capturePlan.DownloadTimes[darkSet.Binning]
-		if !ok {
-			capturePlan.DownloadTimes[darkSet.Binning] = 0
+
+		if _, ok := capturePlan.DownloadTimes[binning]; !ok {
+			capturePlan.DownloadTimes[binning] = 0
 		}
 	}
 
-	//	Initialize the settings for every bias frame set needed
+	//	Create a DownloadTime entry and zero the "done" count for every bias dark set
 	for _, biasSet := range biasSets {
-		key := MakeBiasKey(biasSet)
-		capturePlan.BiasRequired[key] = biasSet
+		if verbosity > 2 {
+			fmt.Printf("Session/createPlanFromConfig processing bias set: %s\n", biasSet)
+		}
+		count, binning, err := ParseBiasSet(biasSet)
+		if err != nil {
+			fmt.Printf("Error in Session createPlanFromConfig, parsing bias set %s: %s\n", biasSet, err)
+			return nil, err
+		}
+		key := MakeBiasKey(count, binning)
 		capturePlan.BiasDone[key] = 0
-		_, ok := capturePlan.DownloadTimes[biasSet.Binning]
-		if !ok {
-			capturePlan.DownloadTimes[biasSet.Binning] = 0
+
+		if _, ok := capturePlan.DownloadTimes[binning]; !ok {
+			capturePlan.DownloadTimes[binning] = 0
 		}
 	}
 
-	return &capturePlan
+	return &capturePlan, nil
 }
 
-func MakeDarkKey(set config.DarkSet) string {
-	return fmt.Sprintf("Dark_%d_%.4f_%d", set.Frames, set.Seconds, set.Binning)
+func MakeDarkKey(count int, exposure float64, binning int) string {
+	return fmt.Sprintf("Dark_%d_%.4f_%d", count, exposure, binning)
 }
 
-func MakeBiasKey(set config.BiasSet) string {
-	return fmt.Sprintf("Bias_%d_%d", set.Frames, set.Binning)
+func MakeBiasKey(count int, binning int) string {
+	return fmt.Sprintf("Bias_%d_%d", count, binning)
 }
 
 func (s *Session) updateDownloadTimes(capturePlan *CapturePlan) error {
+	verbosity := viper.GetInt(config.VerbositySetting)
+	debug := viper.GetBool(config.DebugSetting)
 	//fmt.Printf("updateDownloadTimes. CapturePlan: %#v\n", *capturePlan)
 	for binning, seconds := range capturePlan.DownloadTimes {
 		//fmt.Printf("  Binning %d, download time %g\n", binning, seconds)
 		if seconds == 0 {
-			if s.settings.Verbosity > 1 || s.settings.Debug {
+			if verbosity > 1 || debug {
 				fmt.Printf("Measuring download time for binning %d\n", binning)
 			}
 			measuredTime, err := s.theSkyService.MeasureDownloadTime(binning)
@@ -324,32 +351,35 @@ func (s *Session) updateDownloadTimes(capturePlan *CapturePlan) error {
 	return nil
 }
 
-func (s *Session) captureFrames(capturePlan *CapturePlan, coolingConfig config.CoolingConfig) error {
-	if s.settings.Verbosity > 2 || s.settings.Debug {
-		fmt.Printf("captureFrames. CapturePlan: %#v, cooling: %#v\n", *capturePlan, coolingConfig)
+func (s *Session) captureFrames(capturePlan *CapturePlan) error {
+	verbosity := viper.GetInt(config.VerbositySetting)
+	debug := viper.GetBool(config.DebugSetting)
+	if verbosity > 2 || debug {
+		fmt.Printf("captureFrames. CapturePlan: %#v\n", *capturePlan)
 	}
 
-	if err := s.captureDarkFrames(capturePlan, coolingConfig); err != nil {
+	if err := s.captureDarkFrames(capturePlan); err != nil {
 		fmt.Println("Error in Session captureFrames, capturing dark frames:", err)
 		return err
 	}
 
-	if err := s.captureBiasFrames(capturePlan, coolingConfig); err != nil {
+	if err := s.captureBiasFrames(capturePlan); err != nil {
 		fmt.Println("Error in Session captureFrames, capturing dark frames:", err)
 		return err
 	}
 	return nil
 }
 
-func (s *Session) captureDarkFrames(capturePlan *CapturePlan, coolingConfig config.CoolingConfig) error {
-	//fmt.Println("captureDarkFrames ")
-	//fmt.Printf("   Frames required: %v\n", capturePlan.DarksRequired)
-	//fmt.Printf("   Frames done: %v\n", capturePlan.DarksDone)
-	//fmt.Printf("   Download times: %v\n", capturePlan.DownloadTimes)
-	//fmt.Printf("   Cooling config: %v\n", coolingConfig)
-	for key, set := range capturePlan.DarksRequired {
+func (s *Session) captureDarkFrames(capturePlan *CapturePlan) error {
+	if viper.GetInt(config.VerbositySetting) > 3 {
+		fmt.Println("captureDarkFrames ")
+		fmt.Printf("   Frames required: %v\n", capturePlan.DarksRequired)
+		fmt.Printf("   Frames done: %v\n", capturePlan.DarksDone)
+		fmt.Printf("   Download times: %v\n", capturePlan.DownloadTimes)
+	}
+	for _, set := range capturePlan.DarksRequired {
 		//fmt.Printf("   Checking dark set %s: %v\n", key, set)
-		if err := s.captureDarkSet(capturePlan, key, set, coolingConfig); err != nil {
+		if err := s.captureDarkSet(capturePlan, set); err != nil {
 			fmt.Println("Error in Session captureDarkFrames, capturing dark set:", err)
 			return err
 		}
@@ -357,26 +387,34 @@ func (s *Session) captureDarkFrames(capturePlan *CapturePlan, coolingConfig conf
 	return nil
 }
 
-func (s *Session) captureDarkSet(plan *CapturePlan, key string, set config.DarkSet, coolingConfig config.CoolingConfig) error {
-	if s.settings.Verbosity > 0 || s.settings.Debug {
-		fmt.Printf("Handling dark frames set: %d frames of %.2f seconds binned %d\n", set.Frames, set.Seconds, set.Binning)
+func (s *Session) captureDarkSet(plan *CapturePlan, set string) error {
+	verbosity := viper.GetInt(config.VerbositySetting)
+	debug := viper.GetBool(config.DebugSetting)
+	if verbosity > 0 || debug {
+		fmt.Printf("Handling dark frames set: %s\n", set)
 	}
-	if plan.DarksDone[key] >= set.Frames {
-		if s.settings.Verbosity > 1 || s.settings.Debug {
-			fmt.Printf("  Already have all %d dark frames in set %s\n", set.Frames, key)
+	count, exposure, binning, err := ParseDarkSet(set)
+	if err != nil {
+		fmt.Println("Error in Session captureDarkSet, parsing dark set:", err)
+		return err
+	}
+	key := MakeDarkKey(count, exposure, binning)
+	if plan.DarksDone[key] >= count {
+		if verbosity > 1 {
+			fmt.Printf("  Already have all %d dark frames in set %s\n", count, key)
 		}
 		return nil
 	}
 
-	framesNeeded := set.Frames - plan.DarksDone[key]
+	framesNeeded := count - plan.DarksDone[key]
 	if framesNeeded > 0 {
-		if s.settings.Verbosity > 1 || s.settings.Debug {
-			fmt.Printf("  Still need %d dark frames (of %d) in set %s\n", framesNeeded, set.Frames, key)
+		if verbosity > 1 {
+			fmt.Printf("  Still need %d dark frames (of %d) in set %s\n", framesNeeded, count, key)
 		}
 	}
 	frameCount := 0
-	for plan.DarksDone[key] < set.Frames {
-		abandon, err := s.CheckAbandonForCooling(coolingConfig)
+	for plan.DarksDone[key] < count {
+		abandon, err := s.CheckAbandonForCooling()
 		if err != nil {
 			fmt.Println("Error in Session captureDarkSet, checking for cooling abandon:", err)
 			return err
@@ -388,11 +426,11 @@ func (s *Session) captureDarkSet(plan *CapturePlan, key string, set config.DarkS
 		}
 
 		frameCount++
-		if s.settings.Verbosity > 1 || s.settings.Debug {
-			fmt.Printf("    Capturing dark frame %d of %d:  %.2f seconds binned %d\n", frameCount, framesNeeded, set.Seconds, set.Binning)
+		if verbosity > 1 {
+			fmt.Printf("    Capturing dark frame %d of %d:  %.2f seconds binned %d\n", frameCount, framesNeeded, exposure, binning)
 		}
 
-		if err := s.theSkyService.CaptureDarkFrame(set.Binning, set.Seconds, plan.DownloadTimes[set.Binning]); err != nil {
+		if err := s.theSkyService.CaptureDarkFrame(binning, exposure, plan.DownloadTimes[binning]); err != nil {
 			fmt.Println("Error in Session captureDarkSet, capturing dark frame:", err)
 			return err
 		}
@@ -405,16 +443,16 @@ func (s *Session) captureDarkSet(plan *CapturePlan, key string, set config.DarkS
 	return nil
 }
 
-func (s *Session) captureBiasFrames(capturePlan *CapturePlan, coolingConfig config.CoolingConfig) error {
+func (s *Session) captureBiasFrames(capturePlan *CapturePlan) error {
 	//fmt.Println("captureBiasFrames ")
 	//fmt.Printf("   Frames required: %v\n", capturePlan.BiasRequired)
 	//fmt.Printf("   Frames done: %v\n", capturePlan.BiasDone)
 	//fmt.Printf("   Download times: %v\n", capturePlan.DownloadTimes)
 	//fmt.Printf("   Cooling config: %v\n", coolingConfig)
 
-	for key, set := range capturePlan.BiasRequired {
+	for _, set := range capturePlan.BiasRequired {
 		//fmt.Printf("   Checking bias set %s: %v\n", key, set)
-		if err := s.captureBiasSet(capturePlan, key, set, coolingConfig); err != nil {
+		if err := s.captureBiasSet(capturePlan, set); err != nil {
 			fmt.Println("Error in Session captureBiasFrames, capturing bias set:", err)
 			return err
 		}
@@ -422,26 +460,34 @@ func (s *Session) captureBiasFrames(capturePlan *CapturePlan, coolingConfig conf
 	return nil
 }
 
-func (s *Session) captureBiasSet(plan *CapturePlan, key string, set config.BiasSet, coolingConfig config.CoolingConfig) error {
-	if s.settings.Verbosity > 0 || s.settings.Debug {
-		fmt.Printf("Handling bias frames set: %d frames  binned %d\n", set.Frames, set.Binning)
+func (s *Session) captureBiasSet(plan *CapturePlan, set string) error {
+	verbosity := viper.GetInt(config.VerbositySetting)
+	debug := viper.GetBool(config.DebugSetting)
+	count, binning, err := ParseBiasSet(set)
+	if err != nil {
+		fmt.Println("Error in Session captureBiasSet, parsing bias set:", err)
+		return err
 	}
-	if plan.BiasDone[key] >= set.Frames {
-		if s.settings.Verbosity > 1 || s.settings.Debug {
-			fmt.Printf("  Already have all %d bias frames in set %s\n", set.Frames, key)
+	if verbosity > 0 || debug {
+		fmt.Printf("Handling bias frames set: %d frames  binned %d\n", count, binning)
+	}
+	key := MakeBiasKey(count, binning)
+	if plan.BiasDone[key] >= count {
+		if verbosity > 1 {
+			fmt.Printf("  Already have all %d bias frames in set %s\n", count, key)
 		}
 		return nil
 	}
 
-	framesNeeded := set.Frames - plan.BiasDone[key]
+	framesNeeded := count - plan.BiasDone[key]
 	if framesNeeded > 0 {
-		if s.settings.Verbosity > 1 || s.settings.Debug {
-			fmt.Printf("  Still need %d bias frames (of %d) in set %s\n", framesNeeded, set.Frames, key)
+		if verbosity > 1 {
+			fmt.Printf("  Still need %d bias frames (of %d) in set %s\n", framesNeeded, count, key)
 		}
 	}
 	frameCount := 0
-	for plan.BiasDone[key] < set.Frames {
-		abandon, err := s.CheckAbandonForCooling(coolingConfig)
+	for plan.BiasDone[key] < count {
+		abandon, err := s.CheckAbandonForCooling()
 		if err != nil {
 			fmt.Println("Error in Session captureBiasSet, checking for cooling abandon:", err)
 			return err
@@ -453,11 +499,11 @@ func (s *Session) captureBiasSet(plan *CapturePlan, key string, set config.BiasS
 		}
 
 		frameCount++
-		if s.settings.Verbosity > 1 || s.settings.Debug {
-			fmt.Printf("    Capturing bias frame %d of %d, binned %d\n", frameCount, framesNeeded, set.Binning)
+		if verbosity > 1 {
+			fmt.Printf("    Capturing bias frame %d of %d, binned %d\n", frameCount, framesNeeded, binning)
 		}
 
-		if err := s.theSkyService.CaptureBiasFrame(set.Binning, plan.DownloadTimes[set.Binning]); err != nil {
+		if err := s.theSkyService.CaptureBiasFrame(binning, plan.DownloadTimes[binning]); err != nil {
 			fmt.Println("Error in Session captureBiasSet, capturing bias frame:", err)
 			return err
 		}
@@ -470,20 +516,24 @@ func (s *Session) captureBiasSet(plan *CapturePlan, key string, set config.BiasS
 	return nil
 }
 
-func (s *Session) CheckAbandonForCooling(coolingConfig config.CoolingConfig) (bool, error) {
-	//fmt.Println("CheckAbandonForCooling")
-	if !coolingConfig.AbortOnCooling {
+func (s *Session) CheckAbandonForCooling() (bool, error) {
+	if viper.GetInt(config.VerbositySetting) > 2 {
+		fmt.Println("CheckAbandonForCooling")
+	}
+	if !viper.GetBool(config.AbortOnCoolingSetting) {
 		return false, nil
 	}
 	cameraTemperature, err := s.theSkyService.GetCameraTemperature()
-	//fmt.Println("  Camera temperature:", cameraTemperature)
+	if viper.GetInt(config.VerbositySetting) > 2 {
+		fmt.Println("  Camera temperature:", cameraTemperature)
+	}
 	if err != nil {
 		fmt.Println("Error in Session CheckAbandonForCooling, getting camera temperature:", err)
 		return false, err
 	}
-	variation := math.Abs(cameraTemperature - coolingConfig.CoolTo)
+	variation := math.Abs(cameraTemperature - viper.GetFloat64(config.CoolToSetting))
 	//fmt.Printf("  Temp %g and target %g = variation %g\n", cameraTemperature, coolingConfig.CoolTo, variation)
-	if variation >= coolingConfig.CoolAbortTol {
+	if variation >= viper.GetFloat64(config.CoolAbortTolSetting) {
 		// Camera temperature is unacceptable - return an abort request
 		return true, nil
 	}

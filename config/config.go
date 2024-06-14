@@ -3,26 +3,21 @@ package config
 import (
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"strings"
 	"time"
 )
 
-type SettingsType struct {
+type SettingsTypeRename struct {
 	Verbosity  int
 	Debug      bool
 	StateFile  string //	Path to state file
 	Cooling    CoolingConfig
 	Start      StartConfig
 	Server     ServerConfig
-	BiasFrames []BiasSetElementMap
-	DarkFrames []DarkSetElementMap
+	BiasFrames []string
+	DarkFrames []string
 }
-
-type BiasSetElementMap map[string]BiasSetMap
-type BiasSetMap map[string]float64
-
-type DarkSetElementMap map[string]DarkSetMap
-type DarkSetMap map[string]float64
 
 // CoolingConfig is configuration about use the cameras cooler
 type CoolingConfig struct {
@@ -48,60 +43,32 @@ type ServerConfig struct {
 	Port    int    // TCP port number
 }
 
-// BiasSet is the specification for one set of identical bias frames
-type BiasSet struct {
-	Frames  int //	Number of frames in this set
-	Binning int //	Binning factor
-}
+// Keys to retrieve settings from viper
 
-// DarkSet is the specification for one set of identical bias frames
-type DarkSet struct {
-	Frames  int     //	Number of frames in this set
-	Seconds float64 //	Exposure time in seconds
-	Binning int     //	Binning factor
-}
-
-// GetBiasSets retrieves the list of bias frames requested, converting them from the
-// awkward internal map format to a simple slice of BiasSet structs
-func (config *SettingsType) GetBiasSets() []BiasSet {
-	result := make([]BiasSet, 0, len(config.BiasFrames))
-	//fmt.Printf("ConvertBiasMap: %#v\n", theMap)
-	for _, mapEl := range config.BiasFrames {
-		//fmt.Println("  Handling", key, mapEl)
-		frames := mapEl["biasset"]["frames"]
-		binning := mapEl["biasset"]["binning"]
-		result = append(result, BiasSet{
-			Frames:  int(frames),
-			Binning: int(binning),
-		})
-	}
-	return result
-}
-
-// GetDarkSets retrieves the list of dark frames requested, converting them from the
-// awkward internal map format to a simple slice of DarkSet structs
-func (config *SettingsType) GetDarkSets() []DarkSet {
-	result := make([]DarkSet, 0, len(config.DarkFrames))
-	//fmt.Printf("ConvertBiasMap: %#v\n", theMap)
-	for _, mapEl := range config.DarkFrames {
-		//fmt.Println("  Handling", key, mapEl)
-		frames := mapEl["darkset"]["frames"]
-		seconds := mapEl["darkset"]["seconds"]
-		binning := mapEl["darkset"]["binning"]
-		result = append(result, DarkSet{
-			Frames:  int(frames),
-			Seconds: seconds,
-			Binning: int(binning),
-		})
-	}
-	return result
-}
+const VerbositySetting = "verbosity"
+const DebugSetting = "debug"
+const StateFileSetting = "statefile"
+const UseCoolerSetting = "Cooling.UseCooler"
+const CoolToSetting = "Cooling.CoolTo"
+const CoolStartTolSetting = "Cooling.CoolStartTol"
+const CoolWaitMinutesSetting = "Cooling.CoolWaitMinutes"
+const AbortOnCoolingSetting = "Cooling.AbortOnCooling"
+const CoolAbortTolSetting = "Cooling.CoolAbortTol"
+const CoolerOffAtEndSetting = "Cooling.OffAtEnd"
+const StartDelaySetting = "Start.Delay"
+const StartDaySetting = "Start.Day"
+const StartTimeSetting = "Start.Time"
+const ServerAddressSetting = "Server.Address"
+const ServerPortSetting = "Server.Port"
+const BiasFramesSetting = "BiasFrames"
+const DarkFramesSetting = "DarkFrames"
 
 // ValidateGlobals validates any global settings
-func (config *SettingsType) ValidateGlobals() error {
+func ValidateGlobals() error {
 	//	Verbosity must be between 0 and 5
-	if config.Verbosity < 0 || config.Verbosity > 5 {
-		return errors.New(fmt.Sprintf("invalid verbosity level (%d); must be between 0 and 5", config.Verbosity))
+	verbosity := viper.GetInt(VerbositySetting)
+	if verbosity < 0 || verbosity > 5 {
+		return errors.New(fmt.Sprintf("invalid verbosity level (%d); must be between 0 and 5", verbosity))
 	}
 	return nil
 }
@@ -118,31 +85,34 @@ func (config *SettingsType) ValidateGlobals() error {
 //		a time in 24-hour HH:MM format
 //		it can be empty if delay=false, otherwise it is required
 
-func (config *SettingsType) ParseStart() (bool, time.Time, error) {
-	if config.Start.Delay == false {
+func ParseStart() (bool, time.Time, error) {
+	startDelay := viper.GetBool(StartDelaySetting)
+	startDay := viper.GetString(StartDaySetting)
+	startTime := viper.GetString(StartTimeSetting)
+	if startDelay == false {
 		//	Valid result, no checking of date needed
 		return false, time.Time{}, nil
 	}
-	if config.Start.Time == "" {
+	if startTime == "" {
 		return false, time.Time{}, errors.New("missing start time")
 	}
-	if config.Start.Day == "" {
-		config.Start.Day = "today"
+	if startDay == "" {
+		startDay = "today"
 	}
-	config.Start.Day = strings.ToLower(config.Start.Day)
-	if config.Start.Day == "today" {
+	startDay = strings.ToLower(startDay)
+	if startDay == "today" {
 		//	Get today's date in yyyy-mm-dd format
 		today := time.Now()
-		config.Start.Day = today.Format("2006-01-02")
+		startDay = today.Format("2006-01-02")
 	}
-	if config.Start.Day == "tomorrow" {
+	if startDay == "tomorrow" {
 		today := time.Now()
 		tomorrow := today.AddDate(0, 0, 1)
-		config.Start.Day = tomorrow.Format("2006-01-02")
+		startDay = tomorrow.Format("2006-01-02")
 	}
 	converted, err := time.ParseInLocation(
 		"2006-01-02 15:04",
-		config.Start.Day+" "+config.Start.Time,
+		startDay+" "+startTime,
 		time.Local)
 	if err != nil {
 		return false, time.Time{}, err

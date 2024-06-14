@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
+	"goskydarks/config"
 	"os"
 )
 
@@ -28,6 +30,9 @@ func NewStateFileService(stateFilePath string) StateFileService {
 
 func (sfs *StateFileServiceInstance) SavePlanToFile(capturePlan *CapturePlan) error {
 	//fmt.Println("StateFileServiceInstance/SavePlanToFile()")
+	if viper.GetInt(config.VerbositySetting) > 2 {
+		fmt.Println("StateFileService/SavePlanToFile()")
+	}
 	jsonBytes, err := json.MarshalIndent(capturePlan, "", "   ")
 	if err != nil {
 		fmt.Println("Error in Session saveCapturePlan, marshalling plan:", err)

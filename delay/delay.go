@@ -2,6 +2,7 @@ package delay
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"goskydarks/config"
 	"time"
 )
@@ -16,13 +17,10 @@ type DelayService interface {
 }
 
 type DelayServiceInstance struct {
-	settings config.SettingsType
 }
 
-func NewDelayService(settings config.SettingsType) DelayService {
-	service := &DelayServiceInstance{
-		settings: settings,
-	}
+func NewDelayService() DelayService {
+	service := &DelayServiceInstance{}
 	return service
 }
 
@@ -30,7 +28,7 @@ func NewDelayService(settings config.SettingsType) DelayService {
 //
 //	We return the number of seconds to facilitate mocking with time tracking
 func (s *DelayServiceInstance) DelayDuration(seconds int) (int, error) {
-	if s.settings.Verbosity > 4 {
+	if viper.GetInt(config.VerbositySetting) > 4 {
 		fmt.Println("DelayServiceInstance DelayDuration:", seconds)
 	}
 	if seconds <= 0 {
@@ -44,14 +42,16 @@ func (s *DelayServiceInstance) DelayUntil(target time.Time) error {
 	//	Calculate duration from now until the target time
 	now := time.Now()
 	duration := target.Sub(now)
+	verbosity := viper.GetInt(config.VerbositySetting)
+	debug := viper.GetBool(config.DebugSetting)
 
 	//	Delay for that long
 	if duration > 0 {
-		if s.settings.Verbosity > 3 || s.settings.Debug {
+		if verbosity > 3 || debug {
 			fmt.Printf("Waiting until %v (duration: %v)\n", target, duration)
 		}
 		_, _ = s.DelayDuration(int(duration / time.Second))
-		if s.settings.Verbosity > 3 || s.settings.Debug {
+		if verbosity > 3 || debug {
 			fmt.Println("Reached the target time!")
 		}
 	} else {

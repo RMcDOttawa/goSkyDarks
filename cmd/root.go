@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var Settings *config.SettingsType
+var Settings *config.SettingsTypeRename
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -45,7 +45,7 @@ to be captured, it does not deal with where they are stored.
 
 //func validateGlobalConfig() error {
 //	Verbosity: integer from 0 to 5
-//verbosity := viper.GetInt("verbosity")
+//verbosity := viper.GetInt(VerbositySetting)
 //if verbosity < 0 || verbosity > 5 {
 //	return errors.New(fmt.Sprintf("%d is an invalid verbosity level (must be 0 to 5)", verbosity))
 //}
@@ -68,7 +68,7 @@ func Execute() {
 func init() {
 	rootCmd.Root().CompletionOptions.DisableDefaultCmd = true
 
-	Settings = &config.SettingsType{}
+	Settings = &config.SettingsTypeRename{}
 
 	//	Read config settings from config file
 	viper.SetConfigName("config")
@@ -87,7 +87,7 @@ func init() {
 		fmt.Printf("Read configuration from file: %s\n", viper.ConfigFileUsed())
 	}
 
-	if err := Settings.ValidateGlobals(); err != nil {
+	if err := config.ValidateGlobals(); err != nil {
 		fmt.Println("Error validating global settings:", err)
 		os.Exit(1)
 	}

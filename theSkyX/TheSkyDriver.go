@@ -36,11 +36,8 @@ type TheSkyDriverInstance struct {
 const maxTheSkyBuffer = 4096
 
 // NewTheSkyDriver is the constructor for a working instance of the interface
-func NewTheSkyDriver(debug bool, verbosity int) TheSkyDriver {
-	driver := &TheSkyDriverInstance{
-		debug:     debug,
-		verbosity: verbosity,
-	}
+func NewTheSkyDriver() TheSkyDriver {
+	driver := &TheSkyDriverInstance{}
 	return driver
 }
 

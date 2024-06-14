@@ -1,39 +1,26 @@
 ---
-verbosity:   2               # default 1
-debug: false
+verbosity:   5         # 0 (silent) to 5 (very chatty)
+debug: true
 stateFile:  "./stateFile.state"
 cooling:
-    useCooler:        false
-    coolTo:           -10.0
-    coolStartTol:     2.0
-    coolWaitMinutes:  30
-    abortOnCooling:   true
-    coolAbortTol:     2.0
-    offAtEnd:         true
+    useCooler:        false     # Use camera's cooler?
+    # The following used only if useCooler=true
+    coolTo:           -10.0     # Target temp
+    coolStartTol:     2.0       # Get this close before starting
+    coolWaitMinutes:  30        # Wait this long then give up
+    abortOnCooling:   true      # Abort collection if camera temp rises    
+    coolAbortTol:     2.0       # Abort if temp deviates this much
+    offAtEnd:         true      # Turn cooler off at end of capture?
 start:
-    delay:  false
-    day: today
-    time: 14:04
+    delay:  false      # false=start now;  true=start later
+    day:    today      # Ignored if delay=false         
+    time:   14:04      # Ignored if daley=false
 server:
-   address: "localhost"       # default localhost
-   port:    3040              # default 3040
-biasframes:
-   -  biasset:
-        frames:  8
-        binning: 1
-   -  biasset:
-        frames:  8
-        binning: 2
-darkframes:
-  -  darkset:
-       frames:  8
-       seconds: 10
-       binning: 1
-  -  darkset:
-       frames:  8
-       seconds: 15
-       binning: 2
-  -  darkset:
-       frames:  8
-       seconds: 20
-       binning: 1
+   address: "localhost"       # localhost, domain, or IP address
+   port:    3040              # Port number of at that address
+biasframes:     # List of strings "number,binning"
+    - "2,1"
+    - "2,2"
+darkframes:     # List of strings "number,exposure,binning"
+    - "2,6,1"
+    - "2,8,2"

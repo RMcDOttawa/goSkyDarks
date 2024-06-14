@@ -6,6 +6,9 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"goskydarks/config"
+	"goskydarks/session"
 )
 
 // validateCmd represents the validate command
@@ -35,7 +38,7 @@ func runValidateCommand(_ *cobra.Command, _ []string) {
 	fmt.Printf("   Delay: %t\n", Settings.Start.Delay)
 	fmt.Printf("   Day: %s\n", Settings.Start.Day)
 	fmt.Printf("   Time: %s\n", Settings.Start.Time)
-	delay, start, err := Settings.ParseStart()
+	delay, start, err := config.ParseStart()
 	if err != nil {
 		fmt.Printf("Error parsing start settings: %s\n", err)
 	}
@@ -53,24 +56,23 @@ func runValidateCommand(_ *cobra.Command, _ []string) {
 
 	//	Bias Frames
 	fmt.Println("Bias Frames")
-	bf := Settings.GetBiasSets()
-	if len(bf) == 0 {
-		fmt.Println("   No bias sets")
-	} else {
-		for _, bias := range bf {
-			fmt.Printf("    %d frames binned at %d\n", bias.Frames, bias.Binning)
+	for _, frameSetString := range viper.GetStringSlice(config.BiasFramesSetting) {
+		count, binning, err := session.ParseBiasSet(frameSetString)
+		if err != nil {
+			fmt.Println("   Syntax error in set:", frameSetString)
+		} else {
+			fmt.Printf("   %d bias frames at %d x %d binning\n", count, binning, binning)
 		}
 	}
 
 	//	Dark Frames
 	fmt.Println("Dark Frames")
-	df := Settings.GetDarkSets()
-	if len(df) == 0 {
-		fmt.Println("   No dark sets")
-	} else {
-		for _, dark := range df {
-			fmt.Printf("    %d frames of %g seconds binned at %d\n",
-				dark.Frames, dark.Seconds, dark.Binning)
+	for _, frameSetString := range viper.GetStringSlice(config.DarkFramesSetting) {
+		count, exposure, binning, err := session.ParseDarkSet(frameSetString)
+		if err != nil {
+			fmt.Println("   Syntax error in set:", frameSetString)
+		} else {
+			fmt.Printf("   %d dark frames of %.2f seconds at %d x %d binning\n", count, exposure, binning, binning)
 		}
 	}
 }

@@ -6,6 +6,8 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"goskydarks/config"
 	"goskydarks/session"
 	"os"
 )
@@ -22,21 +24,29 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		//	State file is mandatory when doing a capture
-		if Settings.StateFile == "" {
+		if viper.GetString(config.StateFileSetting) == "" {
 			_, _ = fmt.Fprintln(os.Stderr, "State file is required for capture")
 			return
 		}
 
 		//	Get bias and dark frame specs
-		biasSets := Settings.GetBiasSets()
-		darkSets := Settings.GetDarkSets()
-		if len(biasSets) == 0 && len(darkSets) == 0 {
+		biasFrames := viper.GetStringSlice(config.BiasFramesSetting)
+		darkFrames := viper.GetStringSlice(config.DarkFramesSetting)
+		if err := validateBiasFrames(biasFrames); err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			return
+		}
+		if err := validateDarkFrames(darkFrames); err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			return
+		}
+		if len(biasFrames) == 0 && len(darkFrames) == 0 {
 			fmt.Println("Nothing to capture - specify bias or dark frames")
 			return
 		}
 
 		//	Create the capture session
-		session, err := session.NewSession(*Settings)
+		session, err := session.NewSession()
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, err)
 			return
@@ -47,7 +57,7 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 		}()
 
 		//	Delay start
-		delay, targetTime, err := Settings.ParseStart()
+		delay, targetTime, err := config.ParseStart()
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, err)
 			return
@@ -61,30 +71,52 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 		}
 
 		//	Establish server connection
-		err = session.ConnectToServer(Settings.Server)
+		err = session.ConnectToServer()
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, err)
 			return
 		}
 
 		//	Cool the camera
-		err = session.CoolForStart(Settings.Cooling)
+		err = session.CoolForStart()
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, err)
 			return
 		}
 
 		//	Do the captures until done, interrupted, or cooling aborts
-		err = session.CaptureFrames(biasSets, darkSets, Settings.Cooling)
+		err = session.CaptureFrames(biasFrames, darkFrames)
 
 		//	Stop cooling
-		err = session.StopCooling(Settings.Cooling)
+		err = session.StopCooling()
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, err)
 			return
 		}
 
 	},
+}
+
+func validateDarkFrames(frameStrings []string) error {
+	fmt.Println("\n***\nValidating dark frames:", frameStrings)
+	for _, frameString := range frameStrings {
+		_, _, _, err := session.ParseDarkSet(frameString)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateBiasFrames(frameStrings []string) error {
+	fmt.Println("\n***\nValidating bias frames STUB:", frameStrings)
+	for _, frameString := range frameStrings {
+		_, _, err := session.ParseBiasSet(frameString)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // func

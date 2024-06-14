@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -109,9 +110,8 @@ func TestParseStartTime(t *testing.T) {
 }
 
 func ParseStartTime(delay bool, day string, time string) (bool, time.Time, error) {
-	configObject := &SettingsType{}
-	configObject.Start.Delay = delay
-	configObject.Start.Day = day
-	configObject.Start.Time = time
-	return configObject.ParseStart()
+	viper.Set(StartDelaySetting, delay)
+	viper.Set(StartDaySetting, day)
+	viper.Set(StartTimeSetting, time)
+	return ParseStart()
 }
