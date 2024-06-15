@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/viper"
 	"goskydarks/config"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -22,12 +24,15 @@ type StateFileService interface {
 }
 
 type StateFileServiceInstance struct {
-	StateFilePath string
+	StateFilePathInput string
+	StateFilePath      string // includes temperature
 }
 
-func NewStateFileService(stateFilePath string) StateFileService {
+func NewStateFileService(stateFilePath string, temperature float64) StateFileService {
 	service := &StateFileServiceInstance{}
-	service.StateFilePath = stateFilePath
+	service.StateFilePathInput = stateFilePath
+	tempAsString := strconv.FormatFloat(temperature, 'f', 3, 64)
+	service.StateFilePath = stateFilePath + "_" + strings.ReplaceAll(tempAsString, ".", "_") + ".state"
 	return service
 }
 

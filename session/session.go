@@ -25,7 +25,7 @@ func NewSession() (*Session, error) {
 	tsxService := theSkyX.NewTheSkyService(
 		concreteDelayService,
 	)
-	stateFileService := NewStateFileService(viper.GetString(config.StateFileSetting))
+	stateFileService := NewStateFileService(viper.GetString(config.StateFileSetting), viper.GetFloat64(config.CoolToSetting))
 	session := &Session{
 		delayService:     concreteDelayService,
 		theSkyService:    tsxService,

@@ -1,7 +1,7 @@
 ---
 verbosity:   2         # 0 (silent) to 5 (very chatty)
 debug: false
-stateFile:  "./stateFile.state"
+stateFile:  "./stateFile"
 cooling:
     useCooler:        false     # Use camera's cooler?
     # The following used only if useCooler=true

@@ -83,7 +83,7 @@ func defineGlobalSettings() {
 	rootCmd.PersistentFlags().IntVarP(&Settings.Verbosity, "verbosity", "v", 1, "Set the verbosity level from 0 to 5. (default: 0)")
 	_ = viper.BindPFlag("verbosity", rootCmd.PersistentFlags().Lookup("verbosity"))
 
-	rootCmd.PersistentFlags().StringVarP(&Settings.StateFile, "statefile", "", "./stateFile.state", "State file to store session status")
+	rootCmd.PersistentFlags().StringVarP(&Settings.StateFile, "statefile", "", "./stateFile", "State file to store session status")
 	_ = viper.BindPFlag("statefile", rootCmd.PersistentFlags().Lookup("statefile"))
 
 	rootCmd.PersistentFlags().BoolVarP(&Settings.ShowSettings, "showsettings", "", false, "show settings")
