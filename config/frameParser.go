@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"github.com/spf13/cobra"
 	"strconv"
 	"strings"
 )
@@ -73,4 +74,13 @@ func ParseBiasSet(darkSet string) (int, int, error) {
 	}
 
 	return count, binning, nil
+}
+
+// Determine if the named flag was explicitly set in the command line
+func FlagExplicitlySet(cmd *cobra.Command, flagName string) bool {
+	lookup := cmd.Flags().Lookup(flagName)
+	if lookup == nil {
+		return false
+	}
+	return lookup.Changed
 }

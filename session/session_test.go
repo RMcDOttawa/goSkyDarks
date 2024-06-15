@@ -7,27 +7,33 @@ import (
 	"goskydarks/config"
 	"goskydarks/delay"
 	"goskydarks/theSkyX"
+	"sync"
 	"testing"
 )
 
 const serverAddress = "localhost"
 const serverPort = 3040
 const targetTemperature = -10.0
+const coolStartPollingSeconds = 5
+
+var sessionMutex sync.Mutex
 
 // TestCoolForStart tests the cooling-for-start function of the session.
 // We mock the TheSkyService service to simulate responses from the server
 func TestCoolForStart(t *testing.T) {
 
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	//	Test successfully starting cooling and reaching target immediately
 	t.Run("cooling reaches temp immediately", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
 		viper.Set(config.ServerPortSetting, serverPort)
 		viper.Set(config.CoolToSetting, targetTemperature)
+		viper.Set(config.UseCoolerSetting, true)
 
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
@@ -53,13 +59,19 @@ func TestCoolForStart(t *testing.T) {
 
 	//	Test starting cooling and reaching target after several polls
 	t.Run("cooling reaches temp after several tries", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
 		viper.Set(config.ServerPortSetting, serverPort)
+		viper.Set(config.UseCoolerSetting, true)
 		viper.Set(config.CoolToSetting, targetTemperature) // Cool to this temperature
 		viper.Set(config.CoolStartTolSetting, 2.0)         // Plus or minus this much
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
+		viper.Set(config.StartPollSecondsSetting, coolStartPollingSeconds)
 
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
@@ -68,7 +80,7 @@ func TestCoolForStart(t *testing.T) {
 		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 
-		mockDelayService.EXPECT().DelayDuration(120).AnyTimes().Return(120, nil)
+		mockDelayService.EXPECT().DelayDuration(coolStartPollingSeconds).AnyTimes().Return(coolStartPollingSeconds, nil)
 		mockTheSkyService.EXPECT().Connect(serverAddress, serverPort).Return(nil)
 		mockTheSkyService.EXPECT().Close().Return(nil)
 		mockTheSkyService.EXPECT().StartCooling(targetTemperature).Return(nil)
@@ -90,13 +102,19 @@ func TestCoolForStart(t *testing.T) {
 
 	//	Test starting cooling and not reaching target before timeout
 	t.Run("cooling fails to reach temp", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
 		viper.Set(config.ServerPortSetting, serverPort)
+		viper.Set(config.UseCoolerSetting, true)
 		viper.Set(config.CoolToSetting, targetTemperature) // Cool to this temperature
 		viper.Set(config.CoolStartTolSetting, 2.0)         // Plus or minus this much
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
+		viper.Set(config.StartPollSecondsSetting, coolStartPollingSeconds)
 
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
@@ -105,7 +123,7 @@ func TestCoolForStart(t *testing.T) {
 		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 
-		mockDelayService.EXPECT().DelayDuration(120).AnyTimes().Return(120, nil)
+		mockDelayService.EXPECT().DelayDuration(coolStartPollingSeconds).AnyTimes().Return(coolStartPollingSeconds, nil)
 		mockTheSkyService.EXPECT().Connect(serverAddress, serverPort).Return(nil)
 		mockTheSkyService.EXPECT().Close().Return(nil)
 		mockTheSkyService.EXPECT().StartCooling(targetTemperature).Return(nil)
@@ -126,11 +144,12 @@ func TestCoolForStart(t *testing.T) {
 
 // Test capturing dark frames
 func TestDarkFrameCapture(t *testing.T) {
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	t.Run("Capture all frames since no intermediate results", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -173,6 +192,8 @@ func TestDarkFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Record correct darksDone after capture", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -219,6 +240,8 @@ func TestDarkFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Capture remaining frames - state file says some are done", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -260,10 +283,13 @@ func TestDarkFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Capturing all frames - but abort when temperature rises too far", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
 		viper.Set(config.ServerPortSetting, serverPort)
+		viper.Set(config.UseCoolerSetting, true)
 		viper.Set(config.CoolToSetting, targetTemperature) // Cool to this temperature
 		viper.Set(config.CoolStartTolSetting, 2.0)         // Plus or minus this much
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
@@ -307,11 +333,12 @@ func TestDarkFrameCapture(t *testing.T) {
 
 // Test capturing bias frames
 func TestBiasFrameCapture(t *testing.T) {
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	t.Run("Capture all frames since no intermediate results", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -357,6 +384,8 @@ func TestBiasFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Record correct biasDone after capture", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -403,6 +432,8 @@ func TestBiasFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Capture remaining frames - state file says some are done", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -445,6 +476,8 @@ func TestBiasFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Capturing all frames - but abort when temperature rises too far", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)

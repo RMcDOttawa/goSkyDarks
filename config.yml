@@ -1,5 +1,5 @@
 ---
-verbosity:   1         # 0 (silent) to 5 (very chatty)
+verbosity:   2         # 0 (silent) to 5 (very chatty)
 debug: false
 stateFile:  "./stateFile.state"
 cooling:
@@ -8,6 +8,7 @@ cooling:
     coolTo:           -10.0     # Target temp
     coolStartTol:     2.0       # Get this close before starting
     coolWaitMinutes:  30        # Wait this long then give up
+    startPollSeconds: 10        # How often to poll temp when starting
     abortOnCooling:   true      # Abort collection if camera temp rises    
     coolAbortTol:     2.0       # Abort if temp deviates this much
     offAtEnd:         true      # Turn cooler off at end of capture?

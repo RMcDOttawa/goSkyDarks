@@ -32,6 +32,8 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 			return
 		}
 
+		consistentizeCooling(cmd)
+
 		//	Get bias and dark frame specs
 		biasFrames := viper.GetStringSlice(config.BiasFramesSetting)
 		darkFrames := viper.GetStringSlice(config.DarkFramesSetting)
@@ -98,6 +100,19 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 		}
 
 	},
+}
+
+//	User may use the --coolto flag thinking that is sufficient to turn on cooling
+//	(it isn't - also need the useCooling flag).  If --coolto flag is explicitly used
+//	then we'll set --useCooling on.  We'll warn them if this was a change.
+
+func consistentizeCooling(cmd *cobra.Command) {
+	if config.FlagExplicitlySet(cmd, "coolto") {
+		if !viper.GetBool(config.UseCoolerSetting) {
+			fmt.Println("--coolto used without --usecooler. Turning --usecooler on too.")
+			viper.Set(config.UseCoolerSetting, true)
+		}
+	}
 }
 
 func validateDarkFrames(frameStrings []string) error {

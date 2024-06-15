@@ -3,6 +3,8 @@ package theSkyX
 import (
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
+	"goskydarks/config"
 	"net"
 	"strconv"
 	"strings"
@@ -26,11 +28,9 @@ type TheSkyDriver interface {
 }
 
 type TheSkyDriverInstance struct {
-	debug     bool
-	verbosity int
-	isOpen    bool
-	server    string
-	port      int
+	isOpen bool
+	server string
+	port   int
 }
 
 const maxTheSkyBuffer = 4096
@@ -46,7 +46,7 @@ func NewTheSkyDriver() TheSkyDriver {
 //	In fact, all we do is remember the server coordinates. The actual open of the
 //	socket is deferred until we have a command to send
 func (driver *TheSkyDriverInstance) Connect(server string, port int) error {
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Printf("TheSkyDriverInstance/Connect(%s,%d) entered\n", server, port)
 	}
 	if driver.isOpen {
@@ -56,7 +56,7 @@ func (driver *TheSkyDriverInstance) Connect(server string, port int) error {
 	driver.server = server
 	driver.port = port
 	driver.isOpen = true
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Printf("TheSkyDriverInstance/Connect(%s,%d) successful\n", server, port)
 	}
 	return nil
@@ -64,7 +64,7 @@ func (driver *TheSkyDriverInstance) Connect(server string, port int) error {
 
 // Close severs the connection to the TCP socket for the TheSkyX server
 func (driver *TheSkyDriverInstance) Close() error {
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Printf("TheSkyDriverInstance/Close() entered\n")
 	}
 	if !driver.isOpen {
@@ -72,7 +72,7 @@ func (driver *TheSkyDriverInstance) Close() error {
 		return nil
 	}
 	driver.isOpen = false
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Printf("TheSkyDriverInstance/Close() successful\n")
 	}
 	return nil
@@ -81,15 +81,16 @@ func (driver *TheSkyDriverInstance) Close() error {
 // StartCooling sends server commands to turn on the TEC and set the target temperature
 // No response is expected from these commands
 func (driver *TheSkyDriverInstance) StartCooling(temperature float64) error {
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Printf("TheSkyDriverInstance/StartCooling(%g)  \n", temperature)
 	}
 
 	var commands strings.Builder
 	commands.WriteString("ccdsoftCamera.Connect();\n")
+	commands.WriteString("ccdsoftCamera.RegulateTemperature=false;\n")
+	commands.WriteString(fmt.Sprintf("ccdsoftCamera.TemperatureSetPoint=%.2f;\n", temperature))
 	commands.WriteString("ccdsoftCamera.RegulateTemperature=true;\n")
 	commands.WriteString("ccdsoftCamera.ShutDownTemperatureRegulationOnDisconnect=false;\n")
-	commands.WriteString(fmt.Sprintf("ccdsoftCamera.TemperatureSetPoint=%f;\n", temperature))
 
 	if err := driver.sendCommandIgnoreReply(commands.String()); err != nil {
 		fmt.Println("StartCooling error from driver:", err)
@@ -112,7 +113,7 @@ func (driver *TheSkyDriverInstance) StopCooling() error {
 
 // GetCameraTemperature polls TheSkyX for the current camera temperature and returns it
 func (driver *TheSkyDriverInstance) GetCameraTemperature() (float64, error) {
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("GetCameraTemperature()")
 	}
 	var commands strings.Builder
@@ -173,7 +174,7 @@ func (driver *TheSkyDriverInstance) GetCameraTemperature() (float64, error) {
 const shortExposureLength = 0.1
 
 func (driver *TheSkyDriverInstance) MeasureDownloadTime(binning int) (float64, error) {
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/MeasureDownloadTime ", binning)
 	}
 	var message strings.Builder
@@ -225,7 +226,7 @@ func (driver *TheSkyDriverInstance) MeasureDownloadTime(binning int) (float64, e
 }
 
 func (driver *TheSkyDriverInstance) StartDarkFrameCapture(binning int, seconds float64, downloadTime float64) error {
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/StartDarkFrameCapture ", binning, seconds, downloadTime)
 	}
 	var message strings.Builder
@@ -256,7 +257,7 @@ func (driver *TheSkyDriverInstance) StartDarkFrameCapture(binning int, seconds f
 // This is used for commands where no reply is to be read and processed by the caller
 // (There is a reply from the server, but it is used only to verify successful execution)
 func (driver *TheSkyDriverInstance) sendCommandIgnoreReply(command string) error {
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/sendCommandIgnoreReply: ", command)
 	}
 	var message strings.Builder
@@ -276,7 +277,7 @@ func (driver *TheSkyDriverInstance) sendCommandIgnoreReply(command string) error
 // sendCommandFloatReply is an internal method that sends the given command string to the server.
 // This is used for commands where a floating point number reply is to be read and processed by the caller
 func (driver *TheSkyDriverInstance) sendCommandFloatReply(command string) (float64, error) {
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/sendCommandFloatReply: ", command)
 	}
 	var message strings.Builder
@@ -303,7 +304,7 @@ func (driver *TheSkyDriverInstance) sendCommandFloatReply(command string) (float
 // sendCommandStringReply is an internal method that sends the given command string to the server.
 // This is used for commands where an arbitrary string reply is to be read and processed by the caller
 func (driver *TheSkyDriverInstance) sendCommandStringReply(command string) (string, error) {
-	if driver.verbosity > 3 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/sendCommandStringReply: ", command)
 	}
 	var message strings.Builder
@@ -331,7 +332,7 @@ func (driver *TheSkyDriverInstance) sendCommand(command string) (string, error) 
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Printf("TheSkyDriverInstance/sendCommand() opening socket(%s,%d)\n", driver.server, driver.port)
 	}
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", driver.server, driver.port))
@@ -340,7 +341,7 @@ func (driver *TheSkyDriverInstance) sendCommand(command string) (string, error) 
 		return "", err
 	}
 	defer func(conn net.Conn) {
-		if driver.verbosity > 2 || driver.debug {
+		if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 			fmt.Println("Closing socket")
 		}
 		_ = conn.Close()
@@ -362,6 +363,9 @@ func (driver *TheSkyDriverInstance) sendCommand(command string) (string, error) 
 		fmt.Println("sendCommand error from driver:", err)
 		return "", err
 	}
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
+		fmt.Println("TheSkyDriverInstance/sendCommand() received response:", string(responseBuffer[:numRead]))
+	}
 
 	//	Response will be of the form <data if any> | error line
 	responseParts := strings.Split(string(responseBuffer[:numRead]), "|")
@@ -379,7 +383,7 @@ func (driver *TheSkyDriverInstance) sendCommand(command string) (string, error) 
 
 // IsCaptureDone polls the server to see if the camera is done with its current activity
 func (driver *TheSkyDriverInstance) IsCaptureDone() (bool, error) {
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/IsCaptureDone()")
 	}
 	var message strings.Builder
@@ -393,14 +397,14 @@ func (driver *TheSkyDriverInstance) IsCaptureDone() (bool, error) {
 		fmt.Println("IsCaptureDone error from driver IsExposureComplete:", err)
 		return false, err
 	}
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("IsExposureComplete response:", responseString)
 	}
 	return responseString == "1", nil
 }
 
 func (driver *TheSkyDriverInstance) StartBiasFrameCapture(binning int, downloadTime float64) error {
-	if driver.verbosity > 2 || driver.debug {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/StartBiasFrameCapture ", binning, downloadTime)
 	}
 	var message strings.Builder

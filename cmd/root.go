@@ -110,7 +110,7 @@ func readConfigFile() {
 		os.Exit(1)
 	}
 
-	if Settings.Debug || Settings.Verbosity > 2 {
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
 		fmt.Printf("Read configuration from file: %s\n", viper.ConfigFileUsed())
 	}
 
@@ -176,6 +176,9 @@ func defineCoolingFlags(captureCmd *cobra.Command) {
 
 	captureCmd.Flags().Float64VarP(&Settings.Cooling.CoolStartTol, "coolstarttol", "", 2.0, "Cooling start tolerance")
 	_ = viper.BindPFlag(config.CoolStartTolSetting, captureCmd.Flags().Lookup("coolstarttol"))
+
+	captureCmd.Flags().IntVarP(&Settings.Cooling.StartPollSeconds, "coolstartpollseconds", "", 120, "Seconds between startup temperature checks")
+	_ = viper.BindPFlag(config.StartPollSecondsSetting, captureCmd.Flags().Lookup("coolstartpollseconds"))
 
 	captureCmd.Flags().IntVarP(&Settings.Cooling.CoolWaitMinutes, "coolwaitminutes", "", 30, "Cooling maximum wait time")
 	_ = viper.BindPFlag(config.CoolWaitMinutesSetting, captureCmd.Flags().Lookup("coolwaitminutes"))

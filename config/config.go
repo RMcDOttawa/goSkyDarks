@@ -23,13 +23,14 @@ type SettingsType struct {
 
 // CoolingConfig is configuration about use the cameras cooler
 type CoolingConfig struct {
-	UseCooler       bool    //	Camera has cooler and we'll use it
-	CoolTo          float64 //	Target temperature
-	CoolStartTol    float64 //	Target plus-or-minus this
-	CoolWaitMinutes int     //	How long to wait for target (minutes)
-	AbortOnCooling  bool    //	Abort collection if temp rises
-	CoolAbortTol    float64 //	Amount of temp rise before abort
-	OffAtEnd        bool    //	Turn off cooler at end of session
+	UseCooler        bool    //	Camera has cooler and we'll use it
+	CoolTo           float64 //	Target temperature
+	CoolStartTol     float64 //	Target plus-or-minus this
+	StartPollSeconds int     //	How often to poll during cooling start
+	CoolWaitMinutes  int     //	How long to wait for target (minutes)
+	AbortOnCooling   bool    //	Abort collection if temp rises
+	CoolAbortTol     float64 //	Amount of temp rise before abort
+	OffAtEnd         bool    //	Turn off cooler at end of session
 }
 
 // StartConfig is configuration about delayed start to the collection
@@ -54,6 +55,7 @@ const ShowSettingsSetting = "ShowSettings"
 const UseCoolerSetting = "Cooling.UseCooler"
 const CoolToSetting = "Cooling.CoolTo"
 const CoolStartTolSetting = "Cooling.CoolStartTol"
+const StartPollSecondsSetting = "Cooling.StartPollSeconds"
 const CoolWaitMinutesSetting = "Cooling.CoolWaitMinutes"
 const AbortOnCoolingSetting = "Cooling.AbortOnCooling"
 const CoolAbortTolSetting = "Cooling.CoolAbortTol"

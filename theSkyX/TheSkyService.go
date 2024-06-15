@@ -79,9 +79,9 @@ func (service *TheSkyServiceInstance) Close() error {
 
 // StartCooling turns on the camera's thermoelectric cooler (TEC) and sets target temp
 func (service *TheSkyServiceInstance) StartCooling(targetTemp float64) error {
-	//if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
-	//	fmt.Printf("TheSkyServiceInstance/startCooling(%g) entered\n", targetTemp)
-	//}
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+		fmt.Printf("TheSkyServiceInstance/startCooling(%g) entered\n", targetTemp)
+	}
 	if !service.isOpen {
 		return errors.New("TheSkyServiceInstance/StartCooling: Connection not open")
 	}
@@ -90,9 +90,9 @@ func (service *TheSkyServiceInstance) StartCooling(targetTemp float64) error {
 		fmt.Println("TheSkyServiceInstance/StartCooling error from driver:", err)
 		return err
 	}
-	//if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
-	//	fmt.Printf("TheSkyServiceInstance/startCooling(%g) exits\n", targetTemp)
-	//}
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+		fmt.Printf("TheSkyServiceInstance/startCooling(%g) exits\n", targetTemp)
+	}
 	return nil
 }
 
