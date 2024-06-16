@@ -31,7 +31,10 @@ to a network drive if you like, but that is up to you. This program only causes 
 to be captured, it does not deal with where they are stored.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Running root-level command")
+		if viper.GetBool(config.ShowSettingsSetting) {
+			config.ShowAllSettings()
+		}
+		fmt.Println("No command specified. Use --help for help.")
 		//if Debug || Verbosity >= 4 {
 		//	DisplayFlags()
 		//}
