@@ -141,6 +141,12 @@ func defineFramesFlags(_ *cobra.Command) {
 	captureCmd.Flags().BoolVarP(&Settings.ClearDone, "cleardone", "", false, "Clear done counts in state file, start from zero")
 	_ = viper.BindPFlag(config.ClearDoneSetting, captureCmd.Flags().Lookup("cleardone"))
 
+	captureCmd.Flags().BoolVarP(&Settings.NoDark, "nodark", "", false, "Don't do dark frames, regardless of the list")
+	_ = viper.BindPFlag(config.NoDarkSetting, captureCmd.Flags().Lookup("nodark"))
+
+	captureCmd.Flags().BoolVarP(&Settings.NoBias, "nobias", "", false, "Don't do bias frames, regardless of the list")
+	_ = viper.BindPFlag(config.NoBiasSetting, captureCmd.Flags().Lookup("nobias"))
+
 }
 
 func defineServerFlags(captureCmd *cobra.Command) {

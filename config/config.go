@@ -19,6 +19,8 @@ type SettingsType struct {
 	BiasFrames   []string
 	DarkFrames   []string
 	ClearDone    bool // clear the "done" counts in the state file
+	NoDark       bool // No dark frames even if specified
+	NoBias       bool // No bias frames even if specified
 }
 
 // CoolingConfig is configuration about use the cameras cooler
@@ -67,6 +69,8 @@ const ServerAddressSetting = "Server.Address"
 const ServerPortSetting = "Server.Port"
 const BiasFramesSetting = "BiasFrames"
 const DarkFramesSetting = "DarkFrames"
+const NoBiasSetting = "NoBias"
+const NoDarkSetting = "NoDark"
 const ClearDoneSetting = "ClearDone"
 
 func ShowAllSettings() {

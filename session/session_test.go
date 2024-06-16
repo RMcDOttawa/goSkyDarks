@@ -329,6 +329,46 @@ func TestDarkFrameCapture(t *testing.T) {
 		require.NotNil(t, err, "Dark frame capture should report error")
 		require.ErrorContains(t, err, "exceeding cooling tolerance", "Error message should contain 'exceeding cooling tolerance'")
 	})
+
+	t.Run("Confirm nodark flag prevents dark frames", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
+
+		//	Fake minimal viper settings needed for this test
+		viper.Set(config.ServerAddressSetting, serverAddress)
+		viper.Set(config.ServerPortSetting, serverPort)
+		viper.Set(config.UseCoolerSetting, false)
+		viper.Set(config.NoDarkSetting, true)
+		session, err := NewSession()
+		require.Nil(t, err, "Can't create session")
+
+		//	Mock services
+		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		session.SetTheSkyService(mockTheSkyService)
+		mockStateFileService := NewMockStateFileService(ctrl)
+		session.SetStateFileService(mockStateFileService)
+
+		//	Set up plan for 3 dark frames
+		darksDone := make(map[string]int)
+		darksDone[MakeDarkKey(3, 5.0, 1)] = 0
+		biasDone := make(map[string]int)
+		biasDone[MakeBiasKey(3, 1)] = 0
+		downloadTimes := make(map[int]float64)
+		downloadTimes[1] = 5.0
+		capturePlan := &CapturePlan{
+			DarksRequired: []string{"3,5.0,1"},
+			BiasRequired:  []string{},
+			DarksDone:     darksDone,
+			BiasDone:      biasDone,
+			DownloadTimes: downloadTimes,
+		}
+
+		//	Set up mock expects
+		mockTheSkyService.EXPECT().GetCameraTemperature().AnyTimes().Return(-10.0, nil)
+		mockStateFileService.EXPECT().SavePlanToFile(capturePlan).AnyTimes().Return(nil)
+		err = session.captureDarkFrames(capturePlan)
+		require.Nil(t, err, "Dark frame capture should not report error")
+	})
 }
 
 // Test capturing bias frames
@@ -520,5 +560,45 @@ func TestBiasFrameCapture(t *testing.T) {
 		err = session.captureBiasFrames(capturePlan)
 		require.NotNil(t, err, "Bias frame capture should report error")
 		require.ErrorContains(t, err, "exceeding cooling tolerance", "Error message should contain 'exceeding cooling tolerance'")
+	})
+
+	t.Run("Nobias flag prevents bias capture", func(t *testing.T) {
+		sessionMutex.Lock()
+		defer sessionMutex.Unlock()
+
+		//	Fake minimal viper settings needed for this test
+		viper.Set(config.ServerAddressSetting, serverAddress)
+		viper.Set(config.ServerPortSetting, serverPort)
+		viper.Set(config.UseCoolerSetting, false)
+		viper.Set(config.NoBiasSetting, true)
+		session, err := NewSession()
+		require.Nil(t, err, "Can't create session")
+
+		//	Mock services
+		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		session.SetTheSkyService(mockTheSkyService)
+		mockStateFileService := NewMockStateFileService(ctrl)
+		session.SetStateFileService(mockStateFileService)
+
+		//	Set up plan for 3 bias frames
+		darksDone := make(map[string]int)
+		darksDone[MakeDarkKey(3, 5.0, 1)] = 0
+		biasDone := make(map[string]int)
+		biasDone[MakeBiasKey(3, 1)] = 0
+		downloadTimes := make(map[int]float64)
+		downloadTimes[1] = 5.0
+		capturePlan := &CapturePlan{
+			DarksRequired: []string{},
+			BiasRequired:  []string{"3,1"},
+			DarksDone:     darksDone,
+			BiasDone:      biasDone,
+			DownloadTimes: downloadTimes,
+		}
+
+		//	Set up mock expects
+		mockTheSkyService.EXPECT().GetCameraTemperature().AnyTimes().Return(-10.0, nil)
+		mockStateFileService.EXPECT().SavePlanToFile(capturePlan).AnyTimes().Return(nil)
+		err = session.captureBiasFrames(capturePlan)
+		require.Nil(t, err, "Bias frame capture should not report error")
 	})
 }

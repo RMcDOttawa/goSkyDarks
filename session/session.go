@@ -420,6 +420,12 @@ func (s *Session) captureDarkFrames(capturePlan *CapturePlan) error {
 		fmt.Printf("   Frames done: %v\n", capturePlan.DarksDone)
 		fmt.Printf("   Download times: %v\n", capturePlan.DownloadTimes)
 	}
+	if viper.GetBool(config.NoDarkSetting) {
+		if viper.GetInt(config.VerbositySetting) > 2 {
+			fmt.Println("nodark flag, skipping dark frames")
+		}
+		return nil
+	}
 	for _, set := range capturePlan.DarksRequired {
 		//fmt.Printf("   Checking dark set %s: %v\n", key, set)
 		if err := s.captureDarkSet(capturePlan, set); err != nil {
@@ -493,6 +499,9 @@ func (s *Session) captureBiasFrames(capturePlan *CapturePlan) error {
 	//fmt.Printf("   Download times: %v\n", capturePlan.DownloadTimes)
 	//fmt.Printf("   Cooling config: %v\n", coolingConfig)
 
+	if viper.GetBool(config.NoBiasSetting) {
+		return nil
+	}
 	for _, set := range capturePlan.BiasRequired {
 		//fmt.Printf("   Checking bias set %s: %v\n", key, set)
 		if err := s.captureBiasSet(capturePlan, set); err != nil {
