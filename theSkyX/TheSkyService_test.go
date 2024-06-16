@@ -58,7 +58,7 @@ func TestDarkCapture(t *testing.T) {
 		initialDelay := int(math.Round(seconds + downloadTime + AndALittleExtra)) // from service
 		mockDelayService.EXPECT().DelayDuration(initialDelay).Return(initialDelay, nil)
 		//	Mock extra waits between polls
-		mockDelayService.EXPECT().DelayDuration(1).Return(1, nil).Times(2)
+		mockDelayService.EXPECT().DelayDuration(2).Return(1, nil).Times(2)
 		//	Mock camera status to report capture not done on first or second check; done on third
 		mockDriver.EXPECT().IsCaptureDone().Return(false, nil)
 		mockDriver.EXPECT().IsCaptureDone().Return(false, nil)
@@ -70,7 +70,7 @@ func TestDarkCapture(t *testing.T) {
 
 	// Test of an acquisition timing out.  we start the camera acquisition, wait a calculated amount,
 	// then continue to wait and poll, only to eventually time out with no completion.
-	t.Run("capture dark frame requiring two extra waits", func(t *testing.T) {
+	t.Run("capture dark frame times out while waiting", func(t *testing.T) {
 		//mockDelayService, service, mockDriver := setUpDarkCaptureTest(ctrl)
 		mockDelayService := delay.NewMockDelayService(ctrl)
 		service := NewTheSkyService(mockDelayService)
@@ -87,7 +87,7 @@ func TestDarkCapture(t *testing.T) {
 		initialDelay := int(math.Round(seconds + downloadTime + AndALittleExtra)) // from service
 		mockDelayService.EXPECT().DelayDuration(initialDelay).Return(initialDelay, nil)
 		//	Extra waits between polls
-		mockDelayService.EXPECT().DelayDuration(1).AnyTimes().Return(1, nil)
+		mockDelayService.EXPECT().DelayDuration(2).AnyTimes().Return(1, nil)
 		//	Report capture not done no matter how often we ask, so the logic will eventually time out
 		mockDriver.EXPECT().IsCaptureDone().AnyTimes().Return(false, nil)
 

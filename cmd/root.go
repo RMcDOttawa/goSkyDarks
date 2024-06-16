@@ -147,6 +147,12 @@ func defineFramesFlags(_ *cobra.Command) {
 	captureCmd.Flags().BoolVarP(&Settings.NoBias, "nobias", "", false, "Don't do bias frames, regardless of the list")
 	_ = viper.BindPFlag(config.NoBiasSetting, captureCmd.Flags().Lookup("nobias"))
 
+	captureCmd.Flags().BoolVarP(&Settings.DarkFirst, "darkfirst", "", false, "Do Dark frames first")
+	_ = viper.BindPFlag(config.DarkFirstSetting, captureCmd.Flags().Lookup("darkfirst"))
+
+	captureCmd.Flags().BoolVarP(&Settings.BiasFirst, "biasfirst", "", false, "Do Bias frames first")
+	_ = viper.BindPFlag(config.BiasFirstSetting, captureCmd.Flags().Lookup("biasfirst"))
+
 }
 
 func defineServerFlags(captureCmd *cobra.Command) {

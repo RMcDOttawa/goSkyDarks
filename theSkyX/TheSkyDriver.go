@@ -17,6 +17,7 @@ import (
 
 type TheSkyDriver interface {
 	Connect(server string, port int) error
+	ConnectCamera() error
 	Close() error
 	StartCooling(temp float64) error
 	GetCameraTemperature() (float64, error)
@@ -28,9 +29,10 @@ type TheSkyDriver interface {
 }
 
 type TheSkyDriverInstance struct {
-	isOpen bool
-	server string
-	port   int
+	isOpen          bool
+	server          string
+	port            int
+	cameraConnected bool
 }
 
 const maxTheSkyBuffer = 4096
@@ -41,7 +43,7 @@ func NewTheSkyDriver() TheSkyDriver {
 	return driver
 }
 
-// Connect simulates opening the connection.
+// Connect opens connection to the server and camera.
 //
 //	In fact, all we do is remember the server coordinates. The actual open of the
 //	socket is deferred until we have a command to send
@@ -78,15 +80,35 @@ func (driver *TheSkyDriverInstance) Close() error {
 	return nil
 }
 
+func (driver *TheSkyDriverInstance) ConnectCamera() error {
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
+		fmt.Printf("TheSkyDriverInstance/ConnectCamera()  \n")
+	}
+	var commands strings.Builder
+	commands.WriteString("ccdsoftCamera.Connect();\n")
+	commands.WriteString("var Out;\n")
+	commands.WriteString("Out=0;\n")
+
+	if err := driver.sendCommandIgnoreReply(commands.String()); err != nil {
+		fmt.Println("ConnectCamera error from driver:", err)
+		return err
+	}
+	driver.cameraConnected = true
+	return nil
+
+}
+
 // StartCooling sends server commands to turn on the TEC and set the target temperature
 // No response is expected from these commands
 func (driver *TheSkyDriverInstance) StartCooling(temperature float64) error {
 	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Printf("TheSkyDriverInstance/StartCooling(%g)  \n", temperature)
 	}
+	if !driver.cameraConnected {
+		return errors.New("TheSkyDriverInstance/StartCooling: Camera not connected")
+	}
 
 	var commands strings.Builder
-	commands.WriteString("ccdsoftCamera.Connect();\n")
 	commands.WriteString("ccdsoftCamera.RegulateTemperature=false;\n")
 	commands.WriteString(fmt.Sprintf("ccdsoftCamera.TemperatureSetPoint=%.2f;\n", temperature))
 	commands.WriteString("ccdsoftCamera.RegulateTemperature=true;\n")
@@ -101,8 +123,10 @@ func (driver *TheSkyDriverInstance) StartCooling(temperature float64) error {
 
 func (driver *TheSkyDriverInstance) StopCooling() error {
 	var commands strings.Builder
-	commands.WriteString("ccdsoftCamera.Connect();\n")
 	commands.WriteString("ccdsoftCamera.RegulateTemperature=false;\n")
+	if !driver.cameraConnected {
+		return errors.New("TheSkyDriverInstance/StartCooling: Camera not connected")
+	}
 
 	if err := driver.sendCommandIgnoreReply(commands.String()); err != nil {
 		fmt.Println("StopCooling error from driver:", err)
@@ -116,8 +140,10 @@ func (driver *TheSkyDriverInstance) GetCameraTemperature() (float64, error) {
 	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("GetCameraTemperature()")
 	}
+	if !driver.cameraConnected {
+		return 0.0, errors.New("TheSkyDriverInstance/StartCooling: Camera not connected")
+	}
 	var commands strings.Builder
-	commands.WriteString("ccdsoftCamera.Connect();\n")
 	commands.WriteString("var temp=ccdsoftCamera.Temperature;\n")
 	commands.WriteString("var Out;\n")
 	commands.WriteString("Out=temp + \"\\n\";\n")
@@ -144,7 +170,6 @@ func (driver *TheSkyDriverInstance) GetCameraTemperature() (float64, error) {
 
 // Here is the javascript we will use, explained:
 //	 // Prepare
-//	 ccdsoftCamera.Connect();						// Open the camera
 //	 ccdsoftCamera.Autoguider=false;    			// Use main camera not autoguider
 //	 ccdsoftCamera.Asynchronous=false;  			// synchronous (i.e., wait)
 //	 ccdsoftCamera.Frame=3;  						// Type "3" is dark frame
@@ -177,8 +202,10 @@ func (driver *TheSkyDriverInstance) MeasureDownloadTime(binning int) (float64, e
 	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/MeasureDownloadTime ", binning)
 	}
+	if !driver.cameraConnected {
+		return 0.0, errors.New("TheSkyDriverInstance/StartCooling: Camera not connected")
+	}
 	var message strings.Builder
-	message.WriteString("ccdsoftCamera.Connect();\n")
 	message.WriteString("ccdsoftCamera.Autoguider=false;\n")
 	message.WriteString("ccdsoftCamera.Asynchronous=false;\n")
 	message.WriteString("ccdsoftCamera.Frame=3;\n")
@@ -229,8 +256,10 @@ func (driver *TheSkyDriverInstance) StartDarkFrameCapture(binning int, seconds f
 	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/StartDarkFrameCapture ", binning, seconds, downloadTime)
 	}
+	if !driver.cameraConnected {
+		return errors.New("TheSkyDriverInstance/StartCooling: Camera not connected")
+	}
 	var message strings.Builder
-	message.WriteString("ccdsoftCamera.Connect();\n")         // Open camera
 	message.WriteString("ccdsoftCamera.Autoguider=false;\n")  // Use main camera not autoguider
 	message.WriteString("ccdsoftCamera.Asynchronous=true;\n") // Async (don't wait)
 	message.WriteString("ccdsoftCamera.Frame=3;\n")           // Dark frame
@@ -266,7 +295,10 @@ func (driver *TheSkyDriverInstance) sendCommandIgnoreReply(command string) error
 	message.WriteString(command)
 	message.WriteString("/* Socket End Packet */\n")
 
-	_, err := driver.sendCommand(message.String())
+	response, err := driver.sendCommand(message.String())
+	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
+		fmt.Println("TheSkyDriverInstance/sendCommandIgnoreReply ignoring response: ", response)
+	}
 	if err != nil {
 		fmt.Println("sendCommandNoReply error from driver:", err)
 		return err
@@ -280,6 +312,7 @@ func (driver *TheSkyDriverInstance) sendCommandFloatReply(command string) (float
 	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/sendCommandFloatReply: ", command)
 	}
+
 	var message strings.Builder
 	message.WriteString("/* Java Script */\n")
 	message.WriteString("/* Socket Start Packet */\n")
@@ -307,6 +340,7 @@ func (driver *TheSkyDriverInstance) sendCommandStringReply(command string) (stri
 	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/sendCommandStringReply: ", command)
 	}
+
 	var message strings.Builder
 	message.WriteString("/* Java Script */\n")
 	message.WriteString("/* Socket Start Packet */\n")
@@ -386,8 +420,10 @@ func (driver *TheSkyDriverInstance) IsCaptureDone() (bool, error) {
 	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/IsCaptureDone()")
 	}
+	if !driver.cameraConnected {
+		return false, errors.New("TheSkyDriverInstance/StartCooling: Camera not connected")
+	}
 	var message strings.Builder
-	message.WriteString("ccdsoftCamera.Connect();\n")
 	message.WriteString("var complete = ccdsoftCamera.IsExposureComplete;\n")
 	message.WriteString("var Out;\n")
 	message.WriteString("Out=complete+\"\\n\";\n")
@@ -398,7 +434,7 @@ func (driver *TheSkyDriverInstance) IsCaptureDone() (bool, error) {
 		return false, err
 	}
 	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
-		fmt.Println("IsExposureComplete response:", responseString)
+		fmt.Println("IsCaptureDone response:", responseString)
 	}
 	return responseString == "1", nil
 }
@@ -407,8 +443,10 @@ func (driver *TheSkyDriverInstance) StartBiasFrameCapture(binning int, downloadT
 	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("TheSkyDriverInstance/StartBiasFrameCapture ", binning, downloadTime)
 	}
+	if !driver.cameraConnected {
+		return errors.New("TheSkyDriverInstance/StartCooling: Camera not connected")
+	}
 	var message strings.Builder
-	message.WriteString("ccdsoftCamera.Connect();\n")         // Open camera
 	message.WriteString("ccdsoftCamera.Autoguider=false;\n")  // Use main camera not autoguider
 	message.WriteString("ccdsoftCamera.Asynchronous=true;\n") // Async (don't wait)
 	message.WriteString("ccdsoftCamera.Frame=2;\n")           // Bias frame

@@ -16,6 +16,7 @@ import (
 type TheSkyService interface {
 	//	Open and close persistent socket connection to the server
 	Connect(server string, port int) error
+	ConnectCamera() error
 	Close() error
 	SetDriver(driver TheSkyDriver)
 	StartCooling(targetTemp float64) error
@@ -31,6 +32,9 @@ type TheSkyServiceInstance struct {
 	isOpen       bool
 	delayService delay.DelayService
 }
+
+const minimumTimeoutForDark = 10.0 * 60.0
+const minimumTimeoutForBias = 3.0 * 60.0
 
 func (service *TheSkyServiceInstance) SetDriver(driver TheSkyDriver) {
 	service.driver = driver
@@ -59,6 +63,26 @@ func (service *TheSkyServiceInstance) Connect(server string, port int) error {
 		return err
 	}
 	service.isOpen = true
+
+	if err := service.ConnectCamera(); err != nil {
+		fmt.Println("Error in TheSkyServiceInstance/Connect, connecting camera:", err)
+		return err
+	}
+
+	return nil
+}
+
+// ConnectCamera asks TheSky to connect to the camera.
+func (service *TheSkyServiceInstance) ConnectCamera() error {
+	//fmt.Printf("TheSkyServiceInstance/ConnectCamera()\n")
+	if !service.isOpen {
+		return errors.New("TheSkyServiceInstance/ConnectCamera: Connection not open")
+	}
+	err := service.driver.ConnectCamera()
+	if err != nil {
+		fmt.Println("TheSkyServiceInstance/ConnectCamera error from driver:", err)
+		return err
+	}
 	return nil
 }
 
@@ -136,7 +160,7 @@ func (service *TheSkyServiceInstance) MeasureDownloadTime(binning int) (float64,
 }
 
 const AndALittleExtra = 0.5
-const pollingInterval = 1.0 //	seconds between polls
+const pollingInterval = 2.0 //	seconds between polls
 const timeoutFactor = 5.0   // How much longer to wait than the exposure time
 
 func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds float64, downloadTime float64) error {
@@ -160,7 +184,7 @@ func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds floa
 		return err
 	}
 	//	Now we poll the camera repeatedly until it reports done
-	maximumWaitSeconds := (seconds + downloadTime) * timeoutFactor
+	maximumWaitSeconds := math.Max((seconds+downloadTime)*timeoutFactor, minimumTimeoutForDark)
 	secondsWaitedSoFar := 0.0
 	for {
 		done, err := service.driver.IsCaptureDone()
@@ -210,7 +234,7 @@ func (service *TheSkyServiceInstance) CaptureBiasFrame(binning int, downloadTime
 		return err
 	}
 	//	Now we poll the camera repeatedly until it reports done
-	maximumWaitSeconds := (shortTimeForBiasExposure + downloadTime) * timeoutFactor
+	maximumWaitSeconds := math.Max((shortTimeForBiasExposure+downloadTime)*timeoutFactor, minimumTimeoutForBias)
 	secondsWaitedSoFar := 0.0
 	for {
 		done, err := service.driver.IsCaptureDone()
@@ -231,6 +255,7 @@ func (service *TheSkyServiceInstance) CaptureBiasFrame(binning int, downloadTime
 			fmt.Println("Camera not finished. Delaying ", pollingInterval)
 		}
 		if _, err := service.delayService.DelayDuration(int(math.Round(pollingInterval))); err != nil {
+			//if _, err := service.delayService.DelayDuration(10); err != nil {
 			fmt.Println("TheSkyServiceInstance/CaptureBiasFrame error from polling delay service:", err)
 			return err
 		}

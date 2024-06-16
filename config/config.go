@@ -21,6 +21,8 @@ type SettingsType struct {
 	ClearDone    bool // clear the "done" counts in the state file
 	NoDark       bool // No dark frames even if specified
 	NoBias       bool // No bias frames even if specified
+	DarkFirst    bool // Do dark frames first
+	BiasFirst    bool // Do bias frames first
 }
 
 // CoolingConfig is configuration about use the cameras cooler
@@ -72,6 +74,8 @@ const DarkFramesSetting = "DarkFrames"
 const NoBiasSetting = "NoBias"
 const NoDarkSetting = "NoDark"
 const ClearDoneSetting = "ClearDone"
+const DarkFirstSetting = "DarkFirst"
+const BiasFirstSetting = "BiasFirst"
 
 func ShowAllSettings() {
 	fmt.Println("Validating and displaying all config settings:")
@@ -120,6 +124,8 @@ func ShowAllSettings() {
 			fmt.Printf("   %d bias frames at %d x %d binning\n", count, binning, binning)
 		}
 	}
+	fmt.Printf("   Skip bias frames: %t\n", viper.GetBool(NoBiasSetting))
+	fmt.Printf("   Do bias frames first: %t\n", viper.GetBool(BiasFirstSetting))
 
 	//	Dark Frames
 	fmt.Println("Dark Frames")
@@ -131,6 +137,8 @@ func ShowAllSettings() {
 			fmt.Printf("   %d dark frames of %.2f seconds at %d x %d binning\n", count, exposure, binning, binning)
 		}
 	}
+	fmt.Printf("   Skip dark frames: %t\n", viper.GetBool(NoDarkSetting))
+	fmt.Printf("   Do dark frames first: %t\n", viper.GetBool(DarkFirstSetting))
 }
 
 // ValidateGlobals validates any global settings

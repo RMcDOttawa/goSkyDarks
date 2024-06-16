@@ -89,6 +89,20 @@ func (mr *MockTheSkyServiceMockRecorder) Connect(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Connect", reflect.TypeOf((*MockTheSkyService)(nil).Connect), arg0, arg1)
 }
 
+// ConnectCamera mocks base method.
+func (m *MockTheSkyService) ConnectCamera() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ConnectCamera")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ConnectCamera indicates an expected call of ConnectCamera.
+func (mr *MockTheSkyServiceMockRecorder) ConnectCamera() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConnectCamera", reflect.TypeOf((*MockTheSkyService)(nil).ConnectCamera))
+}
+
 // GetCameraTemperature mocks base method.
 func (m *MockTheSkyService) GetCameraTemperature() (float64, error) {
 	m.ctrl.T.Helper()
