@@ -203,6 +203,7 @@ func (s *Session) waitForTargetTemperature(target float64, tolerance float64, ma
 // completed, that session is continued.  So the given bias and dark list represents the
 // total set of frames wanted - not necessarily the captures that will be done on this call
 func (s *Session) CaptureFrames(
+	areDarksFirst bool,
 	biasFrames []string,
 	darkFrames []string) error {
 	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
@@ -230,7 +231,7 @@ func (s *Session) CaptureFrames(
 	}
 
 	//	Capture frames as needed
-	if err := s.captureFrames(capturePlan); err != nil {
+	if err := s.captureFrames(areDarksFirst, capturePlan); err != nil {
 		fmt.Println("Error in Session capturing frames")
 		return err
 	}
@@ -394,21 +395,29 @@ func (s *Session) updateDownloadTimes(capturePlan *CapturePlan) error {
 	return nil
 }
 
-func (s *Session) captureFrames(capturePlan *CapturePlan) error {
+func (s *Session) captureFrames(careDarksFirst bool, capturePlan *CapturePlan) error {
 	verbosity := viper.GetInt(config.VerbositySetting)
 	debug := viper.GetBool(config.DebugSetting)
 	if verbosity > 2 || debug {
 		fmt.Printf("captureFrames. CapturePlan: %#v\n", *capturePlan)
 	}
 
-	if err := s.captureDarkFrames(capturePlan); err != nil {
-		fmt.Println("Error in Session captureFrames, capturing dark frames:", err)
-		return err
-	}
-
-	if err := s.captureBiasFrames(capturePlan); err != nil {
-		fmt.Println("Error in Session captureFrames, capturing dark frames:", err)
-		return err
+	//	We might be asked to do either the dark or bias frames first
+	//	Determine which, then do a 2-pass loop so each gets done, in the desired order
+	darksThisPass := careDarksFirst
+	for i := 0; i < 2; i++ {
+		if darksThisPass {
+			if err := s.captureDarkFrames(capturePlan); err != nil {
+				fmt.Println("Error in Session captureFrames, capturing dark frames:", err)
+				return err
+			}
+		} else {
+			if err := s.captureBiasFrames(capturePlan); err != nil {
+				fmt.Println("Error in Session captureFrames, capturing dark frames:", err)
+				return err
+			}
+		}
+		darksThisPass = !darksThisPass
 	}
 	return nil
 }

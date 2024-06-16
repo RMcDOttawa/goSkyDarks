@@ -16,16 +16,18 @@ const serverPort = 3040
 const targetTemperature = -10.0
 const coolStartPollingSeconds = 5
 
-var sessionMutex sync.Mutex
+var testFuncMutex sync.Mutex
 
 // TestCoolForStart tests the cooling-for-start function of the session.
 // We mock the TheSkyService service to simulate responses from the server
 func TestCoolForStart(t *testing.T) {
-
+	testFuncMutex.Lock()
+	defer testFuncMutex.Unlock()
+	var subTestMutex sync.Mutex
 	//	Test successfully starting cooling and reaching target immediately
 	t.Run("cooling reaches temp immediately", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -34,6 +36,10 @@ func TestCoolForStart(t *testing.T) {
 		viper.Set(config.ServerPortSetting, serverPort)
 		viper.Set(config.CoolToSetting, targetTemperature)
 		viper.Set(config.UseCoolerSetting, true)
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
 
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
@@ -59,8 +65,8 @@ func TestCoolForStart(t *testing.T) {
 
 	//	Test starting cooling and reaching target after several polls
 	t.Run("cooling reaches temp after several tries", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -72,6 +78,10 @@ func TestCoolForStart(t *testing.T) {
 		viper.Set(config.CoolStartTolSetting, 2.0)         // Plus or minus this much
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
 		viper.Set(config.StartPollSecondsSetting, coolStartPollingSeconds)
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
 
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
@@ -102,8 +112,8 @@ func TestCoolForStart(t *testing.T) {
 
 	//	Test starting cooling and not reaching target before timeout
 	t.Run("cooling fails to reach temp", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -115,6 +125,10 @@ func TestCoolForStart(t *testing.T) {
 		viper.Set(config.CoolStartTolSetting, 2.0)         // Plus or minus this much
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
 		viper.Set(config.StartPollSecondsSetting, coolStartPollingSeconds)
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
 
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
@@ -144,12 +158,15 @@ func TestCoolForStart(t *testing.T) {
 
 // Test capturing dark frames
 func TestDarkFrameCapture(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	testFuncMutex.Lock()
+	defer testFuncMutex.Unlock()
+	var subTestMutex sync.Mutex
 
 	t.Run("Capture all frames since no intermediate results", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -157,6 +174,11 @@ func TestDarkFrameCapture(t *testing.T) {
 		viper.Set(config.CoolToSetting, targetTemperature) // Cool to this temperature
 		viper.Set(config.CoolStartTolSetting, 2.0)         // Plus or minus this much
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
+
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
 
@@ -192,8 +214,10 @@ func TestDarkFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Record correct darksDone after capture", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -201,6 +225,11 @@ func TestDarkFrameCapture(t *testing.T) {
 		viper.Set(config.CoolToSetting, targetTemperature) // Cool to this temperature
 		viper.Set(config.CoolStartTolSetting, 2.0)         // Plus or minus this much
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
+
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
 
@@ -240,8 +269,10 @@ func TestDarkFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Capture remaining frames - state file says some are done", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -249,6 +280,11 @@ func TestDarkFrameCapture(t *testing.T) {
 		viper.Set(config.CoolToSetting, targetTemperature) // Cool to this temperature
 		viper.Set(config.CoolStartTolSetting, 2.0)         // Plus or minus this much
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
+
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
 
@@ -283,8 +319,10 @@ func TestDarkFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Capturing all frames - but abort when temperature rises too far", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -295,6 +333,11 @@ func TestDarkFrameCapture(t *testing.T) {
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
 		viper.Set(config.AbortOnCoolingSetting, true)      // Abort if cooling fails
 		viper.Set(config.CoolAbortTolSetting, 2.0)         // Abort if cooling fails by this much
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
+
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
 
@@ -331,14 +374,19 @@ func TestDarkFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Confirm nodark flag prevents dark frames", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
 		viper.Set(config.ServerPortSetting, serverPort)
 		viper.Set(config.UseCoolerSetting, false)
 		viper.Set(config.NoDarkSetting, true)
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
 
@@ -373,12 +421,15 @@ func TestDarkFrameCapture(t *testing.T) {
 
 // Test capturing bias frames
 func TestBiasFrameCapture(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	testFuncMutex.Lock()
+	defer testFuncMutex.Unlock()
+	var subTestMutex sync.Mutex
 
 	t.Run("Capture all frames since no intermediate results", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -389,6 +440,10 @@ func TestBiasFrameCapture(t *testing.T) {
 		viper.Set(config.AbortOnCoolingSetting, true)
 		viper.Set(config.CoolAbortTolSetting, 2.0)
 		viper.Set(config.CoolWaitMinutesSetting, 30) // And wait this long, no longer
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
 
@@ -424,8 +479,10 @@ func TestBiasFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Record correct biasDone after capture", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -433,6 +490,10 @@ func TestBiasFrameCapture(t *testing.T) {
 		viper.Set(config.CoolToSetting, targetTemperature) // Cool to this temperature
 		viper.Set(config.CoolStartTolSetting, 2.0)         // Plus or minus this much
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
 
@@ -472,8 +533,10 @@ func TestBiasFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Capture remaining frames - state file says some are done", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -483,6 +546,10 @@ func TestBiasFrameCapture(t *testing.T) {
 		viper.Set(config.CoolToSetting, targetTemperature) // Cool to this temperature
 		viper.Set(config.CoolStartTolSetting, 2.0)         // Plus or minus this much
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
 
@@ -516,8 +583,10 @@ func TestBiasFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Capturing all frames - but abort when temperature rises too far", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
@@ -527,6 +596,10 @@ func TestBiasFrameCapture(t *testing.T) {
 		viper.Set(config.CoolWaitMinutesSetting, 30)       // And wait this long, no longer
 		viper.Set(config.AbortOnCoolingSetting, true)      // Abort if cooling fails
 		viper.Set(config.CoolAbortTolSetting, 2.0)         // Abort if cooling fails by this much
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
 
@@ -563,14 +636,19 @@ func TestBiasFrameCapture(t *testing.T) {
 	})
 
 	t.Run("Nobias flag prevents bias capture", func(t *testing.T) {
-		sessionMutex.Lock()
-		defer sessionMutex.Unlock()
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		//	Fake minimal viper settings needed for this test
 		viper.Set(config.ServerAddressSetting, serverAddress)
 		viper.Set(config.ServerPortSetting, serverPort)
 		viper.Set(config.UseCoolerSetting, false)
 		viper.Set(config.NoBiasSetting, true)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
 
@@ -601,4 +679,108 @@ func TestBiasFrameCapture(t *testing.T) {
 		err = session.captureBiasFrames(capturePlan)
 		require.Nil(t, err, "Bias frame capture should not report error")
 	})
+}
+
+func TestCaptureOrder(t *testing.T) {
+	testFuncMutex.Lock()
+	defer testFuncMutex.Unlock()
+	var subTestMutex sync.Mutex
+
+	t.Run("Capture bias first", func(t *testing.T) {
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		//	Fake minimal viper settings needed for this test
+		viper.Set(config.ServerAddressSetting, serverAddress)
+		viper.Set(config.ServerPortSetting, serverPort)
+		viper.Set(config.UseCoolerSetting, false)
+		viper.Set(config.BiasFirstSetting, true) // ** This is the test
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.NoDarkSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
+		session, err := NewSession()
+		require.Nil(t, err, "Can't create session")
+
+		//	Mock services
+		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		session.SetTheSkyService(mockTheSkyService)
+		mockStateFileService := NewMockStateFileService(ctrl)
+		session.SetStateFileService(mockStateFileService)
+
+		//	Set up plan for 3 bias frames and 3 dark frames
+		darksDone := make(map[string]int)
+		darksDone[MakeDarkKey(3, 5.0, 1)] = 0
+		biasDone := make(map[string]int)
+		biasDone[MakeBiasKey(3, 1)] = 0
+		downloadTimes := make(map[int]float64)
+		downloadTimes[1] = 5.0
+		capturePlan := &CapturePlan{
+			DarksRequired: []string{"3,5.0,1"},
+			BiasRequired:  []string{"3,1"},
+			DarksDone:     darksDone,
+			BiasDone:      biasDone,
+			DownloadTimes: downloadTimes,
+		}
+
+		//	Set up mock expects
+		gomock.InOrder(
+			mockTheSkyService.EXPECT().CaptureBiasFrame(1, 5.0).Times(3).Return(nil),
+			mockTheSkyService.EXPECT().CaptureDarkFrame(1, 5.0, 5.0).Times(3).Return(nil),
+		)
+		mockStateFileService.EXPECT().SavePlanToFile(capturePlan).AnyTimes().Return(nil)
+		err = session.captureFrames(false, capturePlan)
+		require.Nil(t, err, "Bias frame capture should not report error")
+
+	})
+
+	t.Run("Capture dark first", func(t *testing.T) {
+		subTestMutex.Lock()
+		defer subTestMutex.Unlock()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		//	Fake minimal viper settings needed for this test
+		viper.Set(config.ServerAddressSetting, serverAddress)
+		viper.Set(config.ServerPortSetting, serverPort)
+		viper.Set(config.UseCoolerSetting, false)
+		viper.Set(config.DarkFirstSetting, true) // ** This is the test
+		viper.Set(config.NoBiasSetting, false)
+		viper.Set(config.BiasFirstSetting, false)
+		viper.Set(config.DarkFirstSetting, false)
+		session, err := NewSession()
+		require.Nil(t, err, "Can't create session")
+
+		//	Mock services
+		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		session.SetTheSkyService(mockTheSkyService)
+		mockStateFileService := NewMockStateFileService(ctrl)
+		session.SetStateFileService(mockStateFileService)
+
+		//	Set up plan for 3 bias frames and 3 dark frames
+		darksDone := make(map[string]int)
+		darksDone[MakeDarkKey(3, 5.0, 1)] = 0
+		biasDone := make(map[string]int)
+		biasDone[MakeBiasKey(3, 1)] = 0
+		downloadTimes := make(map[int]float64)
+		downloadTimes[1] = 5.0
+		capturePlan := &CapturePlan{
+			DarksRequired: []string{"3,5.0,1"},
+			BiasRequired:  []string{"3,1"},
+			DarksDone:     darksDone,
+			BiasDone:      biasDone,
+			DownloadTimes: downloadTimes,
+		}
+
+		//	Set up mock expects
+		gomock.InOrder(
+			mockTheSkyService.EXPECT().CaptureDarkFrame(1, 5.0, 5.0).Times(3).Return(nil),
+			mockTheSkyService.EXPECT().CaptureBiasFrame(1, 5.0).Times(3).Return(nil),
+		)
+		mockStateFileService.EXPECT().SavePlanToFile(capturePlan).AnyTimes().Return(nil)
+		err = session.captureFrames(true, capturePlan)
+		require.Nil(t, err, "Bias frame capture should not report error")
+	})
+
 }

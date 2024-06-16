@@ -90,7 +90,7 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 		}
 
 		//	Do the captures until done, interrupted, or cooling aborts
-		err = session.CaptureFrames(biasFrames, darkFrames)
+		err = session.CaptureFrames(areDarksFirst(cmd), biasFrames, darkFrames)
 
 		//	Stop cooling
 		err = session.StopCooling()
@@ -139,4 +139,25 @@ func validateBiasFrames(frameStrings []string) error {
 func init() {
 	rootCmd.AddCommand(captureCmd)
 
+}
+
+// Determine which set of frames to do first.  We return this result by returning a boolean
+// - true if darks are to be done first
+// - false if bias frames are to be done first
+// If one of (bias, dark) is explicitly set in the cli, use that (darks if both are specified)
+// Otherwise, use the setting in the config file
+func areDarksFirst(cmd *cobra.Command) bool {
+	if config.FlagExplicitlySet(cmd, "darkfirst") {
+		return true
+	}
+	if config.FlagExplicitlySet(cmd, "biasfirst") {
+		return false
+	}
+	if viper.GetBool(config.DarkFirstSetting) {
+		return true
+	}
+	if viper.GetBool(config.BiasFirstSetting) {
+		return false
+	}
+	return true
 }
