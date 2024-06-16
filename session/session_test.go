@@ -56,8 +56,10 @@ func TestCoolForStart(t *testing.T) {
 		err = session.ConnectToServer()
 		require.Nil(t, err, "Can't connect to server")
 
-		err = session.CoolForStart()
+		err = session.StartCoolingForStart()
 		require.Nil(t, err, "Can't cool for start")
+		err = session.WaitForTargetTemperature()
+		require.Nil(t, err, "Error waiting to reach target temperature")
 
 		err = session.Close()
 		require.Nil(t, err, "Can't close session")
@@ -103,8 +105,10 @@ func TestCoolForStart(t *testing.T) {
 		err = session.ConnectToServer()
 		require.Nil(t, err, "Can't connect to server")
 
-		err = session.CoolForStart()
-		require.Nil(t, err, "Can't cool for start")
+		err = session.StartCoolingForStart()
+		require.Nil(t, err, "Can't begin cooling for start")
+		err = session.WaitForTargetTemperature()
+		require.Nil(t, err, "Error waiting to reach target temperature")
 
 		err = session.Close()
 		require.Nil(t, err, "Can't close session")
@@ -146,7 +150,9 @@ func TestCoolForStart(t *testing.T) {
 		err = session.ConnectToServer()
 		require.Nil(t, err, "Can't connect to server")
 
-		err = session.CoolForStart()
+		err = session.StartCoolingForStart()
+		require.Nil(t, err, "Can't begin cooling for start")
+		err = session.WaitForTargetTemperature()
 		require.NotNil(t, err, "Expected cooling to fail on timeout")
 		require.ErrorContains(t, err, "timed out")
 

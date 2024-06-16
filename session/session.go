@@ -111,13 +111,13 @@ func (s *Session) Close() error {
 	return nil
 }
 
-// CoolForStart turns on the camera cooler, if requested, and waits up to a maximum
+// StartCoolingForStart turns on the camera cooler, if requested, and waits up to a maximum
 // amount of time for the camera to reach the specified target temperature
-func (s *Session) CoolForStart() error {
+func (s *Session) StartCoolingForStart() error {
 	verbosity := viper.GetInt(config.VerbositySetting)
 	debug := viper.GetBool(config.DebugSetting)
 	if verbosity > 2 || debug {
-		fmt.Printf("Session/CoolForStart entered\n")
+		fmt.Printf("Session/startCoolingForStart entered\n")
 	}
 	//	Is the session open?
 	if !s.isConnected {
@@ -135,38 +135,45 @@ func (s *Session) CoolForStart() error {
 
 	coolTo := viper.GetFloat64(config.CoolToSetting)
 	if err := s.theSkyService.StartCooling(coolTo); err != nil {
-		fmt.Println("Error in Session CoolForStart, starting cooler:", err)
+		fmt.Println("Error in Session/startCoolingForStart, starting cooler:", err)
 		return err
 	}
 
 	//	Wait until target temperature reached or time-out (too warm, can't cool that far)
 
-	if err := s.waitForTargetTemperature(coolTo,
-		viper.GetFloat64(config.CoolStartTolSetting),
-		viper.GetInt(config.CoolWaitMinutesSetting)); err != nil {
-		fmt.Println("Error in Session CoolForStart, waiting for cooler:", err)
-		return err
-	}
 	if verbosity > 2 || debug {
-		fmt.Printf("Session/CoolForStart exits\n")
+		fmt.Printf("Session/startCoolingForStart exits\n")
 	}
 	return nil
 }
 
-//	 waitForTargetTemperature waits until the camera has cooled to the target temperature
+//	 WaitForTargetTemperature waits until the camera has cooled to the target temperature
 //	 TheSkyX doesn't provide notifications, so we need to poll.  We will check the camera temperature
 //		every minute.  We end the loop in one of two ways:
 //		1. Success: the camera temperature is within the given tolerance of the target temperature
 //		2. Failure: we have waited a specified maximum number of minutes and still haven't reached target
-func (s *Session) waitForTargetTemperature(target float64, tolerance float64, maximumMinutes int) error {
+func (s *Session) WaitForTargetTemperature() error {
 	verbosity := viper.GetInt(config.VerbositySetting)
 	debug := viper.GetBool(config.DebugSetting)
 	if verbosity > 2 || debug {
-		fmt.Printf("Session/waitForTargetTemperature entered, to %g tol %g max wait %d\n", target, tolerance, maximumMinutes)
+		fmt.Println("Session/WaitForTargetTemperature entered")
+	}
+	// If we are not using the cooler we can exit immediately
+	if !viper.GetBool(config.UseCoolerSetting) {
+		if verbosity > 2 || debug {
+			fmt.Println("Cooler not in use, so nothing to do")
+		}
+		return nil
 	}
 	secondsElapsed := 0
-	maximumSeconds := maximumMinutes * 60
+	maximumSeconds := viper.GetInt(config.CoolWaitMinutesSetting) * 60
 	coolStartPollSeconds := viper.GetInt(config.StartPollSecondsSetting)
+	target := viper.GetFloat64(config.CoolToSetting)
+	tolerance := viper.GetFloat64(config.CoolStartTolSetting)
+	if verbosity > 2 || debug {
+		fmt.Printf("  Target temperature: %g, tolerance: %g, max wait: %d\n", target, tolerance, maximumSeconds)
+	}
+
 	//	First temperature is sometimes nonsense, so read and ignore one
 	_, _ = s.theSkyService.GetCameraTemperature()
 	for {
@@ -183,7 +190,7 @@ func (s *Session) waitForTargetTemperature(target float64, tolerance float64, ma
 		if math.Abs(currentTemperature-target) <= tolerance {
 			if verbosity > 2 {
 				fmt.Printf("Current temperature %g is within tolerance %g of target %g\n", currentTemperature, tolerance, target)
-				fmt.Println("waitForTargetTemperature exits")
+				fmt.Println("WaitForTargetTemperature exits")
 			}
 			return nil
 		}
@@ -224,9 +231,24 @@ func (s *Session) CaptureFrames(
 		return err
 	}
 
+	//	Start cooling the camera (if requested).
+	if err := s.StartCoolingForStart(); err != nil {
+		fmt.Println("Error in Session CaptureFrames, starting cooling", err)
+		return err
+	}
+
 	//	Ensure we have download time measurements for all the binning factors we will use
+	//	Since measuring download times can take many seconds, we are doing it now, while
+	//	the camera cooler is bringing the camera down to temperature.
 	if err := s.updateDownloadTimes(capturePlan); err != nil {
 		fmt.Println("Error in Session CaptureFrames, updating download times")
+		return err
+	}
+
+	//	Now we have nothing else we can do until we are at temperature, so we will
+	//	poll and wait until target temperature is reached.
+	if err := s.WaitForTargetTemperature(); err != nil {
+		fmt.Println("Error in Session CoolForStart, waiting for cooler:", err)
 		return err
 	}
 

@@ -82,13 +82,6 @@ Note the config file allows the capture to be deferred until later - e.g. after 
 			return
 		}
 
-		//	Cool the camera
-		err = session.CoolForStart()
-		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, err)
-			return
-		}
-
 		//	Do the captures until done, interrupted, or cooling aborts
 		err = session.CaptureFrames(areDarksFirst(cmd), biasFrames, darkFrames)
 
