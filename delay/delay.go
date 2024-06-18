@@ -28,7 +28,7 @@ func NewDelayService() DelayService {
 //
 //	We return the number of seconds to facilitate mocking with time tracking
 func (s *DelayServiceInstance) DelayDuration(seconds int) (int, error) {
-	if viper.GetInt(config.VerbositySetting) > 4 {
+	if viper.GetInt(config.VerbositySetting) >= 4 {
 		fmt.Println("DelayServiceInstance DelayDuration:", seconds)
 	}
 	if seconds <= 0 {
@@ -47,11 +47,11 @@ func (s *DelayServiceInstance) DelayUntil(target time.Time) error {
 
 	//	Delay for that long
 	if duration > 0 {
-		if verbosity > 3 || debug {
+		if verbosity >= 4 || debug {
 			fmt.Printf("Waiting until %v (duration: %v)\n", target, duration)
 		}
 		_, _ = s.DelayDuration(int(duration / time.Second))
-		if verbosity > 3 || debug {
+		if verbosity >= 4 || debug {
 			fmt.Println("Reached the target time!")
 		}
 	} else {

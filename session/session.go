@@ -21,6 +21,9 @@ type Session struct {
 }
 
 func NewSession() (*Session, error) {
+	if viper.GetInt(config.VerbositySetting) >= 2 {
+		fmt.Println("Creating a new Frame Capture session")
+	}
 	concreteDelayService := delay.NewDelayService()
 	tsxService := theSkyX.NewTheSkyService(
 		concreteDelayService,
@@ -76,6 +79,9 @@ func (s *Session) DelayStart(startTime time.Time) error {
 // ConnectToServer opens the connection to the high-level communication service, keeping
 // it open for subsequent use
 func (s *Session) ConnectToServer() error {
+	if viper.GetInt(config.VerbositySetting) >= 4 {
+		fmt.Println("Session/ConnectToServer entered")
+	}
 	if s.isConnected {
 		fmt.Println("Session already connected")
 		return nil
@@ -102,6 +108,9 @@ func (s *Session) Close() error {
 		fmt.Println("Session already disconnected")
 		return nil
 	}
+	if viper.GetInt(config.VerbositySetting) >= 3 {
+		fmt.Println("Session/Close closing session")
+	}
 
 	if err := s.theSkyService.Close(); err != nil {
 		fmt.Println("Error in Session, closing theSky service:", err)
@@ -116,16 +125,13 @@ func (s *Session) Close() error {
 func (s *Session) StartCoolingForStart() error {
 	verbosity := viper.GetInt(config.VerbositySetting)
 	debug := viper.GetBool(config.DebugSetting)
-	if verbosity > 2 || debug {
-		fmt.Printf("Session/startCoolingForStart entered\n")
-	}
 	//	Is the session open?
 	if !s.isConnected {
 		return errors.New("session not connected")
 	}
 	//	See if we are being asked to cool the camera at all
 	if !viper.GetBool(config.UseCoolerSetting) {
-		if verbosity > 2 || debug {
+		if verbosity >= 2 || debug {
 			fmt.Println("UseCooling is not on, so nothing to do")
 		}
 		return nil
@@ -134,6 +140,9 @@ func (s *Session) StartCoolingForStart() error {
 	//	Start the cooler and set the target temperature
 
 	coolTo := viper.GetFloat64(config.CoolToSetting)
+	if verbosity >= 2 {
+		fmt.Printf("Starting camera cooler with target temperature %.2f\n", coolTo)
+	}
 	if err := s.theSkyService.StartCooling(coolTo); err != nil {
 		fmt.Println("Error in Session/startCoolingForStart, starting cooler:", err)
 		return err
@@ -141,7 +150,7 @@ func (s *Session) StartCoolingForStart() error {
 
 	//	Wait until target temperature reached or time-out (too warm, can't cool that far)
 
-	if verbosity > 2 || debug {
+	if verbosity >= 4 {
 		fmt.Printf("Session/startCoolingForStart exits\n")
 	}
 	return nil
@@ -155,12 +164,12 @@ func (s *Session) StartCoolingForStart() error {
 func (s *Session) WaitForTargetTemperature() error {
 	verbosity := viper.GetInt(config.VerbositySetting)
 	debug := viper.GetBool(config.DebugSetting)
-	if verbosity > 2 || debug {
+	if verbosity >= 4 || debug {
 		fmt.Println("Session/WaitForTargetTemperature entered")
 	}
 	// If we are not using the cooler we can exit immediately
 	if !viper.GetBool(config.UseCoolerSetting) {
-		if verbosity > 2 || debug {
+		if verbosity >= 3 || debug {
 			fmt.Println("Cooler not in use, so nothing to do")
 		}
 		return nil
@@ -170,7 +179,7 @@ func (s *Session) WaitForTargetTemperature() error {
 	coolStartPollSeconds := viper.GetInt(config.StartPollSecondsSetting)
 	target := viper.GetFloat64(config.CoolToSetting)
 	tolerance := viper.GetFloat64(config.CoolStartTolSetting)
-	if verbosity > 2 || debug {
+	if verbosity >= 2 || debug {
 		fmt.Printf("  Target temperature: %g, tolerance: %g, max wait: %d\n", target, tolerance, maximumSeconds)
 	}
 
@@ -188,13 +197,12 @@ func (s *Session) WaitForTargetTemperature() error {
 			return err
 		}
 		if math.Abs(currentTemperature-target) <= tolerance {
-			if verbosity > 2 {
+			if verbosity >= 2 {
 				fmt.Printf("Current temperature %g is within tolerance %g of target %g\n", currentTemperature, tolerance, target)
-				fmt.Println("WaitForTargetTemperature exits")
 			}
 			return nil
 		}
-		if verbosity > 1 {
+		if verbosity >= 2 {
 			fmt.Printf("  Current camera temperature is %.1f, target is %.1f, waiting %d seconds for cooling to stabilize.\n",
 				currentTemperature, target, coolStartPollSeconds)
 		}
@@ -213,7 +221,7 @@ func (s *Session) CaptureFrames(
 	areDarksFirst bool,
 	biasFrames []string,
 	darkFrames []string) error {
-	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
+	if viper.GetInt(config.VerbositySetting) >= 4 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("Session/CaptureFrames entered")
 		fmt.Println("  bias frames:", biasFrames)
 		fmt.Println("  dark frames:", darkFrames)
@@ -264,7 +272,7 @@ func (s *Session) CaptureFrames(
 		return err
 	}
 
-	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
+	if viper.GetInt(config.VerbositySetting) >= 4 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("Session/CaptureFrames exits")
 	}
 	return nil
@@ -276,7 +284,7 @@ func (s *Session) StopCooling() error {
 			fmt.Println("Error in Session StopCooling:", err)
 			return err
 		}
-		if viper.GetInt(config.VerbositySetting) > 1 {
+		if viper.GetInt(config.VerbositySetting) >= 2 {
 			fmt.Printf("Cooling switched off at end of session")
 		}
 	}
@@ -290,7 +298,7 @@ func (s *Session) StopCooling() error {
 //	If the state file includes captures not in the current config, we ignore them - we are using only the "how many frames are done"
 //	info from the state file, plus the download times for each binning level that may be recorded
 func (s *Session) getCapturePlan(biasFrames []string, darkFrames []string) (*CapturePlan, error) {
-	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
+	if viper.GetInt(config.VerbositySetting) > 4 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("Session/getCapturePlan entered")
 		fmt.Println("  bias sets:", biasFrames)
 		fmt.Println("  dark sets:", darkFrames)
@@ -300,7 +308,7 @@ func (s *Session) getCapturePlan(biasFrames []string, darkFrames []string) (*Cap
 		fmt.Println("error in Session getCapturePlan, creating plan from config:", err)
 		return nil, err
 	}
-	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
+	if viper.GetInt(config.VerbositySetting) >= 4 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("Session/getCapturePlan got captureplan from createPlanFromConfig:", capturePlan)
 	}
 	err = s.stateFileService.UpdatePlanFromFile(capturePlan)
@@ -317,7 +325,7 @@ func (s *Session) getCapturePlan(biasFrames []string, darkFrames []string) (*Cap
 			capturePlan.BiasDone[k] = 0
 		}
 	}
-	if viper.GetInt(config.VerbositySetting) > 2 || viper.GetBool(config.DebugSetting) {
+	if viper.GetInt(config.VerbositySetting) >= 4 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("Session/getCapturePlan exits, returning:")
 		fmt.Printf("  Capture plan: %#v\n", *capturePlan)
 	}
@@ -326,7 +334,7 @@ func (s *Session) getCapturePlan(biasFrames []string, darkFrames []string) (*Cap
 
 func (s *Session) createPlanFromConfig(biasSets []string, darkSets []string) (*CapturePlan, error) {
 	verbosity := viper.GetInt(config.VerbositySetting)
-	if verbosity > 3 || viper.GetBool(config.DebugSetting) {
+	if verbosity >= 4 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("createPlanFromConfig entered")
 		fmt.Println("  bias sets:", biasSets)
 		fmt.Println("  dark sets:", darkSets)
@@ -343,7 +351,7 @@ func (s *Session) createPlanFromConfig(biasSets []string, darkSets []string) (*C
 
 	//	Create a DownloadTime entry and zero the "done" count for every dark set
 	for _, darkSet := range darkSets {
-		if verbosity > 2 {
+		if verbosity >= 4 {
 			fmt.Printf("Session/createPlanFromConfig creating downloadtime and done entry for dark set: %s\n", darkSet)
 		}
 		count, exposure, binning, err := config.ParseDarkSet(darkSet)
@@ -361,7 +369,7 @@ func (s *Session) createPlanFromConfig(biasSets []string, darkSets []string) (*C
 
 	//	Create a DownloadTime entry and zero the "done" count for every bias dark set
 	for _, biasSet := range biasSets {
-		if verbosity > 2 {
+		if verbosity >= 4 {
 			fmt.Printf("Session/createPlanFromConfig creating downloadtime and done entry for bias set: %s\n", biasSet)
 		}
 		count, binning, err := config.ParseBiasSet(biasSet)
@@ -376,7 +384,7 @@ func (s *Session) createPlanFromConfig(biasSets []string, darkSets []string) (*C
 			capturePlan.DownloadTimes[binning] = 0
 		}
 	}
-	if verbosity > 3 || viper.GetBool(config.DebugSetting) {
+	if verbosity >= 4 || viper.GetBool(config.DebugSetting) {
 		fmt.Println("createPlanFromConfig exits")
 		fmt.Printf("  capture plan: %#v\n", capturePlan)
 	}
@@ -395,13 +403,13 @@ func MakeBiasKey(count int, binning int) string {
 func (s *Session) updateDownloadTimes(capturePlan *CapturePlan) error {
 	verbosity := viper.GetInt(config.VerbositySetting)
 	debug := viper.GetBool(config.DebugSetting)
-	if debug || verbosity > 2 {
+	if debug || verbosity >= 4 {
 		fmt.Printf("updateDownloadTimes. CapturePlan: %#v\n", *capturePlan)
 	}
 	for binning, seconds := range capturePlan.DownloadTimes {
 		//fmt.Printf("  Binning %d, download time %g\n", binning, seconds)
 		if seconds == 0 {
-			if verbosity > 1 || debug {
+			if verbosity >= 2 || debug {
 				fmt.Printf("Measuring download time for binning %d\n", binning)
 			}
 			measuredTime, err := s.theSkyService.MeasureDownloadTime(binning)
@@ -411,7 +419,7 @@ func (s *Session) updateDownloadTimes(capturePlan *CapturePlan) error {
 			capturePlan.DownloadTimes[binning] = measuredTime
 		}
 	}
-	if debug || verbosity > 3 {
+	if debug || verbosity >= 4 {
 		fmt.Printf("  updateDownloadTimes exits, Download times now %#v\n", capturePlan.DownloadTimes)
 	}
 	return nil
@@ -420,7 +428,7 @@ func (s *Session) updateDownloadTimes(capturePlan *CapturePlan) error {
 func (s *Session) captureFrames(careDarksFirst bool, capturePlan *CapturePlan) error {
 	verbosity := viper.GetInt(config.VerbositySetting)
 	debug := viper.GetBool(config.DebugSetting)
-	if verbosity > 2 || debug {
+	if verbosity >= 4 || debug {
 		fmt.Printf("captureFrames. CapturePlan: %#v\n", *capturePlan)
 	}
 
@@ -445,14 +453,14 @@ func (s *Session) captureFrames(careDarksFirst bool, capturePlan *CapturePlan) e
 }
 
 func (s *Session) captureDarkFrames(capturePlan *CapturePlan) error {
-	if viper.GetInt(config.VerbositySetting) > 3 {
+	if viper.GetInt(config.VerbositySetting) >= 4 {
 		fmt.Println("captureDarkFrames ")
 		fmt.Printf("   Frames required: %v\n", capturePlan.DarksRequired)
 		fmt.Printf("   Frames done: %v\n", capturePlan.DarksDone)
 		fmt.Printf("   Download times: %v\n", capturePlan.DownloadTimes)
 	}
 	if viper.GetBool(config.NoDarkSetting) {
-		if viper.GetInt(config.VerbositySetting) > 2 {
+		if viper.GetInt(config.VerbositySetting) >= 2 {
 			fmt.Println("nodark flag, skipping dark frames")
 		}
 		return nil
@@ -471,7 +479,7 @@ func (s *Session) captureDarkSet(plan *CapturePlan, set string) error {
 	verbosity := viper.GetInt(config.VerbositySetting)
 	debug := viper.GetBool(config.DebugSetting)
 	count, exposure, binning, err := config.ParseDarkSet(set)
-	if verbosity > 0 || debug {
+	if verbosity >= 1 || debug {
 		fmt.Printf("Handling dark frames set: %d frames of %.1f seconds binned %d\n", count, exposure, binning)
 	}
 	if err != nil {
@@ -488,7 +496,7 @@ func (s *Session) captureDarkSet(plan *CapturePlan, set string) error {
 
 	framesNeeded := count - plan.DarksDone[key]
 	if framesNeeded > 0 {
-		if verbosity > 1 {
+		if verbosity >= 2 {
 			fmt.Printf("  Still need %d dark frames (of %d) in set %s\n", framesNeeded, count, key)
 		}
 	}
@@ -506,7 +514,7 @@ func (s *Session) captureDarkSet(plan *CapturePlan, set string) error {
 		}
 
 		frameCount++
-		if verbosity > 1 {
+		if verbosity >= 2 {
 			fmt.Printf("    Capturing dark frame %d of %d:  %.2f seconds binned %d\n", frameCount, framesNeeded, exposure, binning)
 		}
 
@@ -524,13 +532,16 @@ func (s *Session) captureDarkSet(plan *CapturePlan, set string) error {
 }
 
 func (s *Session) captureBiasFrames(capturePlan *CapturePlan) error {
-	//fmt.Println("captureBiasFrames ")
-	//fmt.Printf("   Frames required: %v\n", capturePlan.BiasRequired)
-	//fmt.Printf("   Frames done: %v\n", capturePlan.BiasDone)
-	//fmt.Printf("   Download times: %v\n", capturePlan.DownloadTimes)
-	//fmt.Printf("   Cooling config: %v\n", coolingConfig)
-
+	if viper.GetInt(config.VerbositySetting) >= 4 {
+		fmt.Println("captureBiasFrames ")
+		fmt.Printf("   Frames required: %v\n", capturePlan.BiasRequired)
+		fmt.Printf("   Frames done: %v\n", capturePlan.BiasRequired)
+		fmt.Printf("   Download times: %v\n", capturePlan.BiasRequired)
+	}
 	if viper.GetBool(config.NoBiasSetting) {
+		if viper.GetInt(config.VerbositySetting) >= 2 {
+			fmt.Println("nodark flag, skipping bias frames")
+		}
 		return nil
 	}
 	for _, set := range capturePlan.BiasRequired {
@@ -551,12 +562,12 @@ func (s *Session) captureBiasSet(plan *CapturePlan, set string) error {
 		fmt.Println("Error in Session captureBiasSet, parsing bias set:", err)
 		return err
 	}
-	if verbosity > 0 || debug {
+	if verbosity >= 1 || debug {
 		fmt.Printf("Handling bias frames set: %d frames  binned %d\n", count, binning)
 	}
 	key := MakeBiasKey(count, binning)
 	if plan.BiasDone[key] >= count {
-		if verbosity > 1 {
+		if verbosity >= 2 {
 			fmt.Printf("  Already have all %d bias frames in set %s\n", count, key)
 		}
 		return nil
@@ -564,7 +575,7 @@ func (s *Session) captureBiasSet(plan *CapturePlan, set string) error {
 
 	framesNeeded := count - plan.BiasDone[key]
 	if framesNeeded > 0 {
-		if verbosity > 1 {
+		if verbosity >= 2 {
 			fmt.Printf("  Still need %d bias frames (of %d) in set %s\n", framesNeeded, count, key)
 		}
 	}
@@ -582,7 +593,7 @@ func (s *Session) captureBiasSet(plan *CapturePlan, set string) error {
 		}
 
 		frameCount++
-		if verbosity > 1 {
+		if verbosity >= 2 {
 			fmt.Printf("    Capturing bias frame %d of %d, binned %d\n", frameCount, framesNeeded, binning)
 		}
 
@@ -600,7 +611,7 @@ func (s *Session) captureBiasSet(plan *CapturePlan, set string) error {
 }
 
 func (s *Session) CheckAbandonForCooling() (bool, error) {
-	if viper.GetInt(config.VerbositySetting) > 2 {
+	if viper.GetInt(config.VerbositySetting) >= 4 {
 		fmt.Println("CheckAbandonForCooling")
 	}
 	if !viper.GetBool(config.UseCoolerSetting) {
@@ -610,7 +621,7 @@ func (s *Session) CheckAbandonForCooling() (bool, error) {
 		return false, nil
 	}
 	cameraTemperature, err := s.theSkyService.GetCameraTemperature()
-	if viper.GetInt(config.VerbositySetting) > 2 {
+	if viper.GetInt(config.VerbositySetting) >= 4 {
 		fmt.Println("  Camera temperature:", cameraTemperature)
 	}
 	if err != nil {

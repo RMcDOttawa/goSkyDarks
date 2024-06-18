@@ -40,7 +40,7 @@ func (sfs *StateFileServiceInstance) SavePlanToFile(capturePlan *CapturePlan) er
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 4 {
 		fmt.Println("StateFileService/SavePlanToFile()")
 		fmt.Printf("  Plan: %#v\n", capturePlan)
 	}
@@ -78,7 +78,7 @@ func (sfs *StateFileServiceInstance) SavePlanToFile(capturePlan *CapturePlan) er
 func (sfs *StateFileServiceInstance) UpdatePlanFromFile(capturePlan *CapturePlan) error {
 	mutex.Lock()
 	defer mutex.Unlock()
-	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 4 {
 		fmt.Println("StateFileServiceInstance/UpdatePlanFromFile()")
 		fmt.Println("   Plan:", capturePlan)
 	}
@@ -94,7 +94,7 @@ func (sfs *StateFileServiceInstance) UpdatePlanFromFile(capturePlan *CapturePlan
 		//	No state file, so nothing to update
 		return nil
 	}
-	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 3 {
 		fmt.Println("  Plan read from state file:", stateFilePlan)
 	}
 
@@ -102,7 +102,7 @@ func (sfs *StateFileServiceInstance) UpdatePlanFromFile(capturePlan *CapturePlan
 	for key, count := range capturePlan.BiasDone {
 		stateFileCount := stateFilePlan.BiasDone[key]
 		if stateFileCount > count {
-			if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+			if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 3 {
 				fmt.Printf("  Replacing BiasDone[%s] %d with %d\n", key, count, stateFileCount)
 			}
 			capturePlan.BiasDone[key] = stateFileCount
@@ -111,7 +111,7 @@ func (sfs *StateFileServiceInstance) UpdatePlanFromFile(capturePlan *CapturePlan
 	for key, count := range capturePlan.DarksDone {
 		stateFileCount := stateFilePlan.DarksDone[key]
 		if stateFileCount > count {
-			if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+			if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 3 {
 				fmt.Printf("  Replacing DarksDone[%s] %d with %d\n", key, count, stateFileCount)
 			}
 			capturePlan.DarksDone[key] = stateFileCount
@@ -122,28 +122,28 @@ func (sfs *StateFileServiceInstance) UpdatePlanFromFile(capturePlan *CapturePlan
 	for binning, downloadTime := range capturePlan.DownloadTimes {
 		stateFileTime := stateFilePlan.DownloadTimes[binning]
 		if stateFileTime > downloadTime {
-			if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+			if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 3 {
 				fmt.Printf("  Replacing DownloadTime[%d] %g with %g\n", binning, downloadTime, stateFileTime)
 			}
 			capturePlan.DownloadTimes[binning] = stateFileTime
 		}
 	}
 
-	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 4 {
 		fmt.Println("UpdatePlanFromFile exits")
 	}
 	return nil
 }
 
 func (sfs *StateFileServiceInstance) ReadStateFile() (*CapturePlan, error) {
-	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 4 {
 		fmt.Printf("ReadStateFile.  Path: %s\n", sfs.StateFilePath)
 	}
 
 	//	See if file exists
 	_, err := os.Stat(sfs.StateFilePath)
 	if errors.Is(err, os.ErrNotExist) {
-		if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+		if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 4 {
 			fmt.Println("State file does not exist")
 		}
 		return nil, nil
@@ -152,7 +152,7 @@ func (sfs *StateFileServiceInstance) ReadStateFile() (*CapturePlan, error) {
 	//	Read file into json string
 	fileContentsBytes, err := os.ReadFile(sfs.StateFilePath)
 	fileContents := string(fileContentsBytes)
-	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 4 {
 		fmt.Printf("  Read %d bytes: %s", len(fileContents), fileContents)
 	}
 	//	Unmarshall JSON to data structure
@@ -162,7 +162,7 @@ func (sfs *StateFileServiceInstance) ReadStateFile() (*CapturePlan, error) {
 		return nil, errors.New("error unmarshalling state file")
 	}
 
-	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 4 {
 		fmt.Println("ReadStateFile exits")
 	}
 	return stateFilePlan, nil

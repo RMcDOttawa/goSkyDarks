@@ -35,23 +35,8 @@ to be captured, it does not deal with where they are stored.
 			config.ShowAllSettings()
 		}
 		fmt.Println("No command specified. Use --help for help.")
-		//if Debug || Verbosity >= 4 {
-		//	DisplayFlags()
-		//}
-		//err := validateGlobalConfig()
-		//if err != nil {
-		//	fmt.Println("Error in global flag:", err)
-		//	os.Exit(1)
-		//}
 	},
 }
-
-//func validateGlobalConfig() error {
-//	Verbosity: integer from 0 to 5
-//verbosity := viper.GetInt(VerbositySetting)
-//if verbosity < 0 || verbosity > 5 {
-//	return errors.New(fmt.Sprintf("%d is an invalid verbosity level (must be 0 to 5)", verbosity))
-//}
 
 //	State file: no validation - will depend on what we do with it and we'll
 //	detect any errors in path then
@@ -113,7 +98,7 @@ func readConfigFile() {
 		os.Exit(1)
 	}
 
-	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 3 {
 		fmt.Printf("Read configuration from file: %s\n", viper.ConfigFileUsed())
 	}
 
