@@ -2,11 +2,11 @@ package session
 
 import (
 	"github.com/RMcDOttawa/goMockableDelay"
+	"github.com/RMcDOttawa/goTheSkyX"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"goskydarks/config"
-	"goskydarks/theSkyX"
 	"sync"
 	"testing"
 )
@@ -45,7 +45,7 @@ func TestCoolForStart(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 		mockDelayService := goMockableDelay.NewMockDelayService(ctrl)
 		session.SetDelayService(mockDelayService)
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 
 		mockTheSkyService.EXPECT().Connect(serverAddress, serverPort).Return(nil)
@@ -89,7 +89,7 @@ func TestCoolForStart(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 		mockDelayService := goMockableDelay.NewMockDelayService(ctrl)
 		session.SetDelayService(mockDelayService)
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 
 		mockDelayService.EXPECT().DelayDuration(coolStartPollingSeconds).AnyTimes().Return(coolStartPollingSeconds, nil)
@@ -138,7 +138,7 @@ func TestCoolForStart(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 		mockDelayService := goMockableDelay.NewMockDelayService(ctrl)
 		session.SetDelayService(mockDelayService)
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 
 		mockDelayService.EXPECT().DelayDuration(coolStartPollingSeconds).AnyTimes().Return(coolStartPollingSeconds, nil)
@@ -189,7 +189,7 @@ func TestDarkFrameCapture(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
@@ -240,7 +240,7 @@ func TestDarkFrameCapture(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
@@ -295,7 +295,7 @@ func TestDarkFrameCapture(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
@@ -348,7 +348,7 @@ func TestDarkFrameCapture(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
@@ -397,7 +397,7 @@ func TestDarkFrameCapture(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
@@ -454,7 +454,7 @@ func TestBiasFrameCapture(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
@@ -504,7 +504,7 @@ func TestBiasFrameCapture(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
@@ -560,7 +560,7 @@ func TestBiasFrameCapture(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
@@ -610,7 +610,7 @@ func TestBiasFrameCapture(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
@@ -659,7 +659,7 @@ func TestBiasFrameCapture(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
@@ -710,7 +710,7 @@ func TestCaptureOrder(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
@@ -759,7 +759,7 @@ func TestCaptureOrder(t *testing.T) {
 		require.Nil(t, err, "Can't create session")
 
 		//	Mock services
-		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
+		mockTheSkyService := goTheSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
 		mockStateFileService := NewMockStateFileService(ctrl)
 		session.SetStateFileService(mockStateFileService)
