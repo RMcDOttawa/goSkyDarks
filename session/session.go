@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/spf13/viper"
 	"goskydarks/config"
-	"goskydarks/delay"
+	"goskydarks/delaypkg"
 	"goskydarks/theSkyX"
 	"math"
 	"time"
@@ -14,17 +14,18 @@ import (
 // Session struct implements the session service, used for overall session control
 // such as start time or resuming from saved state
 type Session struct {
-	delayService     delay.DelayService //	Used to delay start; replace with mock for testing
+	delayService     delaypkg.DelayService //	Used to delaypkg start; replace with mock for testing
 	theSkyService    theSkyX.TheSkyService
 	stateFileService StateFileService
 	isConnected      bool
 }
 
 func NewSession() (*Session, error) {
-	if viper.GetInt(config.VerbositySetting) >= 2 {
+	verbosity := viper.GetInt(config.VerbositySetting)
+	if verbosity >= 2 {
 		fmt.Println("Creating a new Frame Capture session")
 	}
-	concreteDelayService := delay.NewDelayService()
+	concreteDelayService := delaypkg.NewDelayService(viper.GetBool(config.DebugSetting), verbosity)
 	tsxService := theSkyX.NewTheSkyService(
 		concreteDelayService,
 	)
@@ -41,7 +42,7 @@ func NewSession() (*Session, error) {
 // and what has already been done.  It is used to track progress and to determine what
 // needs to be done next.  It is saved to a file so that a session can be resumed if interrupted.
 // Since capturing a frame includes waiting while it is downloaded, we also pre-measure the
-// download time for each binning factor used so this can be taken into account in the delay waiting
+// download time for each binning factor used so this can be taken into account in the delaypkg waiting
 // for the exposure to complete.  (TheSkyX doesn't provide a download complete notification)
 // The download time is a linear function of the file size, which is a linear function of the binning factor,
 // so we will just keep a measure for each binning level
@@ -53,8 +54,8 @@ type CapturePlan struct {
 	DownloadTimes map[int]float64 // seconds, indexed by binning
 }
 
-// SetDelayService allows delay service to be replaced with a mock for testing
-func (s *Session) SetDelayService(delayService delay.DelayService) {
+// SetDelayService allows delaypkg service to be replaced with a mock for testing
+func (s *Session) SetDelayService(delayService delaypkg.DelayService) {
 	s.delayService = delayService
 }
 

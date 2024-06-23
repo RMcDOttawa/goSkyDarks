@@ -1,5 +1,5 @@
 
-mockgen -destination=delay_mock.go -package=delay . DelayService
+mockgen -destination=delay_mock.go -package=delaypkg . DelayService
 
 mockgen -destination=StateFileService_mock.go -package=session . StateFileService
 

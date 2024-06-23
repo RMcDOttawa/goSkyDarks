@@ -1,33 +1,41 @@
 ---
-verbosity:   2         # 0 (silent) to 5 (very chatty)
-debug: false
-stateFile:  "./stateFile"
+verbosity:   2         # 0 (silent) to 5 (very chatty)                      # --verbosity  -v
+debug: false                                                                # --debug
+stateFile:  "./stateFile"                                                   # --stateFile
+showSettings: false                                                         # --showSettings
 cooling:
-    useCooler:        false     # Use camera's cooler?
+    useCooler:        false     # Use camera's cooler?                      # --usecooler
     # The following used only if useCooler=true
-    coolTo:           -10.0     # Target temp
-    coolStartTol:     2.0       # Get this close before starting
-    coolWaitMinutes:  30        # Wait this long then give up
-    startPollSeconds: 10        # How often to poll temp when starting
-    abortOnCooling:   true      # Abort collection if camera temp rises    
-    coolAbortTol:     2.0       # Abort if temp deviates this much
-    offAtEnd:         true      # Turn cooler off at end of capture?
+    coolTo:           -10.0     # Target temp                               # --coolto
+    coolStartTol:     2.0       # Get this close before starting            # --coolstarttol
+    coolWaitMinutes:  30        # Wait this long then give up               # --coolwaitminutes
+    startPollSeconds: 10        # How often to poll temp when starting      # --coolstartpollseconds
+    abortOnCooling:   true      # Abort collection if camera temp rises     # --abortoncooling
+    coolAbortTol:     2.0       # Abort if temp deviates this much          # --coolaborttol
+    offAtEnd:         true      # Turn cooler off at end of capture?        # --coolingoffafter
 start:
-    delay:  false      # false=start now;  true=start later
-    day:    today      # Ignored if delay=false         
-    time:   14:04      # Ignored if daley=false
+    delay:  false      # false=start now;  true=start later                 # --delaystart
+    day:    today      # Ignored if delaypkg=false                             # --startday
+    time:   14:04      # Ignored if daley=false                             # --starttime
 server:
-   address: "localhost"       # localhost, domain, or IP address
-   port:    3040              # Port number of at that address
+   address: "localhost"       # localhost, domain, or IP address            # --server
+   port:    3040              # Port number of at that address              # --port
 biasframes:     # List of strings "number,binning"
-    - "1,1"
+    - "1,1"                                                                 # --bias "#,bin"
     - "1,3"
     - "1,2"
 darkframes:     # List of strings "number,exposure,binning"
-    - "1,6,1"
+    - "1,6,1"                                                               # --dark "#,exp,bin"
     - "1,3,1"
     - "1,8,2"
 
+darkFirst: true                                                             # --darkfirst
+biasFirst: false                                                            # --biasfirst
 
+# Normally used only as flags:
+#   --help
+#   --cleardone
+#   --nodark
+#   --nobias
 
 

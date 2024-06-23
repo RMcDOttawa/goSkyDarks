@@ -152,16 +152,16 @@ func ValidateGlobals() error {
 }
 
 //	ParseStart parses the string start time settings received from the
-//	config file and returns whether a delay is wanted, and the start time
+//	config file and returns whether a delaypkg is wanted, and the start time
 //	converted to a real Time object
-//	day and time are checked only if delay=true
+//	day and time are checked only if delaypkg=true
 //	The day string can be one of:
 //		Empty or missing, indicating "today"
 //		The word "today" or "tomorrow"
 //		A date in yyyy-mm-dd format
 //	The time string can be
 //		a time in 24-hour HH:MM format
-//		it can be empty if delay=false, otherwise it is required
+//		it can be empty if delaypkg=false, otherwise it is required
 
 func ParseStart() (bool, time.Time, error) {
 	startDelay := viper.GetBool(StartDelaySetting)

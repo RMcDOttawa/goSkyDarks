@@ -3,7 +3,7 @@ package theSkyX
 import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"goskydarks/delay"
+	"goskydarks/delaypkg"
 	"math"
 	"testing"
 )
@@ -18,7 +18,7 @@ func TestDarkCapture(t *testing.T) {
 	// of time, and then see that the camera reports done
 	t.Run("capture dark frame ready on time", func(t *testing.T) {
 		//mockDelayService, service, mockDriver := setUpDarkCaptureTest(ctrl)
-		mockDelayService := delay.NewMockDelayService(ctrl)
+		mockDelayService := delaypkg.NewMockDelayService(ctrl)
 		service := NewTheSkyService(mockDelayService)
 		// Plug mock driver into service
 		mockDriver := NewMockTheSkyDriver(ctrl)
@@ -28,7 +28,7 @@ func TestDarkCapture(t *testing.T) {
 		const seconds = 20.0
 		const downloadTime = 5.0
 		mockDriver.EXPECT().StartDarkFrameCapture(binning, seconds, downloadTime).Return(nil)
-		//	Initial delay while waiting for exposure
+		//	Initial delaypkg while waiting for exposure
 		initialDelay := int(math.Round(seconds + downloadTime + AndALittleExtra)) // from service
 		mockDelayService.EXPECT().DelayDuration(initialDelay).Return(initialDelay, nil)
 		//	Report capture done on first check
@@ -43,7 +43,7 @@ func TestDarkCapture(t *testing.T) {
 	//then find it isn't finished. So we loop and poll two more times, then it is done.
 	t.Run("capture dark frame requiring two extra waits", func(t *testing.T) {
 		//mockDelayService, service, mockDriver := setUpDarkCaptureTest(ctrl)
-		mockDelayService := delay.NewMockDelayService(ctrl)
+		mockDelayService := delaypkg.NewMockDelayService(ctrl)
 		service := NewTheSkyService(mockDelayService)
 		// Plug mock driver into service
 		mockDriver := NewMockTheSkyDriver(ctrl)
@@ -54,7 +54,7 @@ func TestDarkCapture(t *testing.T) {
 		const downloadTime = 5.0
 		//	The mock driver will be asked to initiate capture, and this will report success
 		mockDriver.EXPECT().StartDarkFrameCapture(1, seconds, downloadTime).Return(nil)
-		//	Mock the initial delay while waiting for exposure
+		//	Mock the initial delaypkg while waiting for exposure
 		initialDelay := int(math.Round(seconds + downloadTime + AndALittleExtra)) // from service
 		mockDelayService.EXPECT().DelayDuration(initialDelay).Return(initialDelay, nil)
 		//	Mock extra waits between polls
@@ -72,7 +72,7 @@ func TestDarkCapture(t *testing.T) {
 	// then continue to wait and poll, only to eventually time out with no completion.
 	t.Run("capture dark frame times out while waiting", func(t *testing.T) {
 		//mockDelayService, service, mockDriver := setUpDarkCaptureTest(ctrl)
-		mockDelayService := delay.NewMockDelayService(ctrl)
+		mockDelayService := delaypkg.NewMockDelayService(ctrl)
 		service := NewTheSkyService(mockDelayService)
 		// Plug mock driver into service
 		mockDriver := NewMockTheSkyDriver(ctrl)
@@ -83,7 +83,7 @@ func TestDarkCapture(t *testing.T) {
 		const downloadTime = 5.0
 		//	The mock driver will be asked to initiate capture, and this will report success
 		mockDriver.EXPECT().StartDarkFrameCapture(1, seconds, downloadTime).Return(nil)
-		//	Initial delay while waiting for exposure
+		//	Initial delaypkg while waiting for exposure
 		initialDelay := int(math.Round(seconds + downloadTime + AndALittleExtra)) // from service
 		mockDelayService.EXPECT().DelayDuration(initialDelay).Return(initialDelay, nil)
 		//	Extra waits between polls

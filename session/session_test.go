@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"goskydarks/config"
-	"goskydarks/delay"
+	"goskydarks/delaypkg"
 	"goskydarks/theSkyX"
 	"sync"
 	"testing"
@@ -43,7 +43,7 @@ func TestCoolForStart(t *testing.T) {
 
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
-		mockDelayService := delay.NewMockDelayService(ctrl)
+		mockDelayService := delaypkg.NewMockDelayService(ctrl)
 		session.SetDelayService(mockDelayService)
 		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
@@ -87,7 +87,7 @@ func TestCoolForStart(t *testing.T) {
 
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
-		mockDelayService := delay.NewMockDelayService(ctrl)
+		mockDelayService := delaypkg.NewMockDelayService(ctrl)
 		session.SetDelayService(mockDelayService)
 		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)
@@ -136,7 +136,7 @@ func TestCoolForStart(t *testing.T) {
 
 		session, err := NewSession()
 		require.Nil(t, err, "Can't create session")
-		mockDelayService := delay.NewMockDelayService(ctrl)
+		mockDelayService := delaypkg.NewMockDelayService(ctrl)
 		session.SetDelayService(mockDelayService)
 		mockTheSkyService := theSkyX.NewMockTheSkyService(ctrl)
 		session.SetTheSkyService(mockTheSkyService)

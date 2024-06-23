@@ -14,11 +14,11 @@ func TestParseStartTime(t *testing.T) {
 
 	//	******* Valid cases *******
 
-	//	No delay
-	t.Run("delay false", func(t *testing.T) {
+	//	No delaypkg
+	t.Run("delaypkg false", func(t *testing.T) {
 		useStart, _, err := ParseStartTime(false, "", "")
 		require.Nil(t, err)
-		require.False(t, useStart, "delay=false should parse as non-deferred start")
+		require.False(t, useStart, "delaypkg=false should parse as non-deferred start")
 	})
 
 	//	12:35

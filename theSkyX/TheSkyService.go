@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/spf13/viper"
 	"goskydarks/config"
-	"goskydarks/delay"
+	"goskydarks/delaypkg"
 	"math"
 )
 
@@ -30,7 +30,7 @@ type TheSkyService interface {
 type TheSkyServiceInstance struct {
 	driver       TheSkyDriver
 	isOpen       bool
-	delayService delay.DelayService
+	delayService delaypkg.DelayService
 }
 
 const minimumTimeoutForDark = 10.0 * 60.0
@@ -41,7 +41,7 @@ func (service *TheSkyServiceInstance) SetDriver(driver TheSkyDriver) {
 }
 
 // NewTheSkyService is the constructor for the instance of this service
-func NewTheSkyService(delayService delay.DelayService) TheSkyService {
+func NewTheSkyService(delayService delaypkg.DelayService) TheSkyService {
 	service := &TheSkyServiceInstance{
 		isOpen:       false,
 		driver:       NewTheSkyDriver(),
@@ -180,7 +180,7 @@ func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds floa
 		fmt.Println("Exposure started. Waiting for ", delayUntilComplete)
 	}
 	if _, err := service.delayService.DelayDuration(delayUntilComplete); err != nil {
-		fmt.Println("TheSkyServiceInstance/CaptureDarkFrame error from delay service:", err)
+		fmt.Println("TheSkyServiceInstance/CaptureDarkFrame error from delaypkg service:", err)
 		return err
 	}
 	//	Now we poll the camera repeatedly until it reports done
@@ -205,7 +205,7 @@ func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds floa
 			fmt.Println("Camera not finished. Delaying ", pollingInterval)
 		}
 		if _, err := service.delayService.DelayDuration(int(math.Round(pollingInterval))); err != nil {
-			fmt.Println("TheSkyServiceInstance/CaptureDarkFrame error from polling delay service:", err)
+			fmt.Println("TheSkyServiceInstance/CaptureDarkFrame error from polling delaypkg service:", err)
 			return err
 		}
 		secondsWaitedSoFar += pollingInterval
@@ -230,7 +230,7 @@ func (service *TheSkyServiceInstance) CaptureBiasFrame(binning int, downloadTime
 		fmt.Println("Exposure started. Waiting for ", delayUntilComplete)
 	}
 	if _, err := service.delayService.DelayDuration(delayUntilComplete); err != nil {
-		fmt.Println("TheSkyServiceInstance/CaptureBiasFrame error from delay service:", err)
+		fmt.Println("TheSkyServiceInstance/CaptureBiasFrame error from delaypkg service:", err)
 		return err
 	}
 	//	Now we poll the camera repeatedly until it reports done
@@ -256,7 +256,7 @@ func (service *TheSkyServiceInstance) CaptureBiasFrame(binning int, downloadTime
 		}
 		if _, err := service.delayService.DelayDuration(int(math.Round(pollingInterval))); err != nil {
 			//if _, err := service.delayService.DelayDuration(10); err != nil {
-			fmt.Println("TheSkyServiceInstance/CaptureBiasFrame error from polling delay service:", err)
+			fmt.Println("TheSkyServiceInstance/CaptureBiasFrame error from polling delaypkg service:", err)
 			return err
 		}
 		secondsWaitedSoFar += pollingInterval
