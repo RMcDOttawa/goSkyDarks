@@ -120,6 +120,30 @@ func (mr *MockTheSkyDriverMockRecorder) MeasureDownloadTime(arg0 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MeasureDownloadTime", reflect.TypeOf((*MockTheSkyDriver)(nil).MeasureDownloadTime), arg0)
 }
 
+// SetDebug mocks base method.
+func (m *MockTheSkyDriver) SetDebug(arg0 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetDebug", arg0)
+}
+
+// SetDebug indicates an expected call of SetDebug.
+func (mr *MockTheSkyDriverMockRecorder) SetDebug(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDebug", reflect.TypeOf((*MockTheSkyDriver)(nil).SetDebug), arg0)
+}
+
+// SetVerbosity mocks base method.
+func (m *MockTheSkyDriver) SetVerbosity(arg0 int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetVerbosity", arg0)
+}
+
+// SetVerbosity indicates an expected call of SetVerbosity.
+func (mr *MockTheSkyDriverMockRecorder) SetVerbosity(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetVerbosity", reflect.TypeOf((*MockTheSkyDriver)(nil).SetVerbosity), arg0)
+}
+
 // StartBiasFrameCapture mocks base method.
 func (m *MockTheSkyDriver) StartBiasFrameCapture(arg0 int, arg1 float64) error {
 	m.ctrl.T.Helper()

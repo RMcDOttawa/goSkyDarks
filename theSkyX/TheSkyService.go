@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/RMcDOttawa/goMockableDelay"
-	"github.com/spf13/viper"
-	"goskydarks/config"
 	"math"
 )
 
@@ -25,12 +23,16 @@ type TheSkyService interface {
 	MeasureDownloadTime(binning int) (float64, error)
 	CaptureDarkFrame(binning int, seconds float64, downloadTime float64) error
 	CaptureBiasFrame(binning int, downloadTime float64) error // for mocking
+	SetDebug(debug bool)
+	SetVerbosity(verbosity int)
 }
 
 type TheSkyServiceInstance struct {
 	driver       TheSkyDriver
 	isOpen       bool
 	delayService goMockableDelay.DelayService
+	debug        bool
+	verbosity    int
 }
 
 const minimumTimeoutForDark = 10.0 * 60.0
@@ -40,12 +42,24 @@ func (service *TheSkyServiceInstance) SetDriver(driver TheSkyDriver) {
 	service.driver = driver
 }
 
+func (service *TheSkyServiceInstance) SetDebug(debug bool) {
+	service.debug = debug
+}
+
+func (service *TheSkyServiceInstance) SetVerbosity(verbosity int) {
+	service.verbosity = verbosity
+}
+
 // NewTheSkyService is the constructor for the instance of this service
-func NewTheSkyService(delayService goMockableDelay.DelayService) TheSkyService {
+func NewTheSkyService(delayService goMockableDelay.DelayService,
+	debug bool,
+	verbosity int) TheSkyService {
 	service := &TheSkyServiceInstance{
 		isOpen:       false,
-		driver:       NewTheSkyDriver(),
+		driver:       NewTheSkyDriver(debug, verbosity),
 		delayService: delayService,
+		debug:        debug,
+		verbosity:    verbosity,
 	}
 	return service
 }
@@ -103,7 +117,7 @@ func (service *TheSkyServiceInstance) Close() error {
 
 // StartCooling turns on the camera's thermoelectric cooler (TEC) and sets target temp
 func (service *TheSkyServiceInstance) StartCooling(targetTemp float64) error {
-	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 4 {
+	if service.debug || service.verbosity >= 4 {
 		fmt.Printf("TheSkyServiceInstance/startCooling(%g) entered\n", targetTemp)
 	}
 	if !service.isOpen {
@@ -114,7 +128,7 @@ func (service *TheSkyServiceInstance) StartCooling(targetTemp float64) error {
 		fmt.Println("TheSkyServiceInstance/StartCooling error from driver:", err)
 		return err
 	}
-	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 4 {
+	if service.debug || service.verbosity >= 4 {
 		fmt.Printf("TheSkyServiceInstance/startCooling(%g) exits\n", targetTemp)
 	}
 	return nil
@@ -164,9 +178,7 @@ const pollingInterval = 2.0 //	seconds between polls
 const timeoutFactor = 5.0   // How much longer to wait than the exposure time
 
 func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds float64, downloadTime float64) error {
-	verbosity := viper.GetInt(config.VerbositySetting)
-	debug := viper.GetBool(config.DebugSetting)
-	if verbosity >= 4 || debug {
+	if service.verbosity >= 4 || service.debug {
 		fmt.Printf("TheSkyServiceInstance/CaptureDarkFrame(%d, %g, %g) \n", binning, seconds, downloadTime)
 	}
 	err := service.driver.StartDarkFrameCapture(binning, seconds, downloadTime)
@@ -176,7 +188,7 @@ func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds floa
 	}
 	//	Now we'll wait until the exposure is probably over - exposure time + download time
 	delayUntilComplete := int(math.Round(seconds + downloadTime + AndALittleExtra))
-	if verbosity >= 3 {
+	if service.verbosity >= 3 {
 		fmt.Println("Exposure started. Waiting for ", delayUntilComplete)
 	}
 	if _, err := service.delayService.DelayDuration(delayUntilComplete); err != nil {
@@ -193,7 +205,7 @@ func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds floa
 			return err
 		}
 		if done {
-			if verbosity >= 4 {
+			if service.verbosity >= 4 {
 				fmt.Println("capture is done, returning")
 			}
 			return nil
@@ -201,7 +213,7 @@ func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds floa
 		if secondsWaitedSoFar > maximumWaitSeconds {
 			return errors.New("TheSkyServiceInstance/CaptureDarkFrame: Timeout waiting for capture to finish")
 		}
-		if verbosity >= 4 {
+		if service.verbosity >= 4 {
 			fmt.Println("Camera not finished. Delaying ", pollingInterval)
 		}
 		if _, err := service.delayService.DelayDuration(int(math.Round(pollingInterval))); err != nil {
@@ -213,9 +225,7 @@ func (service *TheSkyServiceInstance) CaptureDarkFrame(binning int, seconds floa
 }
 
 func (service *TheSkyServiceInstance) CaptureBiasFrame(binning int, downloadTime float64) error {
-	verbosity := viper.GetInt(config.VerbositySetting)
-	debug := viper.GetBool(config.DebugSetting)
-	if verbosity >= 4 || debug {
+	if service.verbosity >= 4 || service.debug {
 		fmt.Printf("TheSkyServiceInstance/CaptureBiasFrame(%d, %g) \n", binning, downloadTime)
 	}
 	err := service.driver.StartBiasFrameCapture(binning, downloadTime)
@@ -226,7 +236,7 @@ func (service *TheSkyServiceInstance) CaptureBiasFrame(binning int, downloadTime
 	//	Now we'll wait until the exposure is probably over - exposure time + download time
 	const shortTimeForBiasExposure = 0.1
 	delayUntilComplete := int(math.Round(shortTimeForBiasExposure + downloadTime + AndALittleExtra))
-	if verbosity >= 3 {
+	if service.verbosity >= 3 {
 		fmt.Println("Exposure started. Waiting for ", delayUntilComplete)
 	}
 	if _, err := service.delayService.DelayDuration(delayUntilComplete); err != nil {
@@ -243,7 +253,7 @@ func (service *TheSkyServiceInstance) CaptureBiasFrame(binning int, downloadTime
 			return err
 		}
 		if done {
-			if verbosity >= 4 {
+			if service.verbosity >= 4 {
 				fmt.Println("capture is done, returning")
 			}
 			return nil
@@ -251,7 +261,7 @@ func (service *TheSkyServiceInstance) CaptureBiasFrame(binning int, downloadTime
 		if secondsWaitedSoFar > maximumWaitSeconds {
 			return errors.New("TheSkyServiceInstance/CaptureBiasFrame: Timeout waiting for capture to finish")
 		}
-		if verbosity >= 4 {
+		if service.verbosity >= 4 {
 			fmt.Println("Camera not finished. Delaying ", pollingInterval)
 		}
 		if _, err := service.delayService.DelayDuration(int(math.Round(pollingInterval))); err != nil {

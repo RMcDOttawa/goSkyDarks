@@ -28,6 +28,8 @@ func NewSession() (*Session, error) {
 	concreteDelayService := goMockableDelay.NewDelayService(viper.GetBool(config.DebugSetting), verbosity)
 	tsxService := theSkyX.NewTheSkyService(
 		concreteDelayService,
+		viper.GetBool(config.DebugSetting),
+		verbosity,
 	)
 	stateFileService := NewStateFileService(viper.GetString(config.StateFileSetting), viper.GetFloat64(config.CoolToSetting))
 	session := &Session{

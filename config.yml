@@ -4,7 +4,7 @@ debug: false                                                                # --
 stateFile:  "./stateFile"                                                   # --stateFile
 showSettings: false                                                         # --showSettings
 cooling:
-    useCooler:        false     # Use camera's cooler?                      # --usecooler
+    useCooler:        true     # Use camera's cooler?                      # --usecooler
     # The following used only if useCooler=true
     coolTo:           -10.0     # Target temp                               # --coolto
     coolStartTol:     2.0       # Get this close before starting            # --coolstarttol

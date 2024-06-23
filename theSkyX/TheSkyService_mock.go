@@ -133,6 +133,18 @@ func (mr *MockTheSkyServiceMockRecorder) MeasureDownloadTime(arg0 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MeasureDownloadTime", reflect.TypeOf((*MockTheSkyService)(nil).MeasureDownloadTime), arg0)
 }
 
+// SetDebug mocks base method.
+func (m *MockTheSkyService) SetDebug(arg0 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetDebug", arg0)
+}
+
+// SetDebug indicates an expected call of SetDebug.
+func (mr *MockTheSkyServiceMockRecorder) SetDebug(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDebug", reflect.TypeOf((*MockTheSkyService)(nil).SetDebug), arg0)
+}
+
 // SetDriver mocks base method.
 func (m *MockTheSkyService) SetDriver(arg0 TheSkyDriver) {
 	m.ctrl.T.Helper()
@@ -143,6 +155,18 @@ func (m *MockTheSkyService) SetDriver(arg0 TheSkyDriver) {
 func (mr *MockTheSkyServiceMockRecorder) SetDriver(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDriver", reflect.TypeOf((*MockTheSkyService)(nil).SetDriver), arg0)
+}
+
+// SetVerbosity mocks base method.
+func (m *MockTheSkyService) SetVerbosity(arg0 int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetVerbosity", arg0)
+}
+
+// SetVerbosity indicates an expected call of SetVerbosity.
+func (mr *MockTheSkyServiceMockRecorder) SetVerbosity(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetVerbosity", reflect.TypeOf((*MockTheSkyService)(nil).SetVerbosity), arg0)
 }
 
 // StartCooling mocks base method.

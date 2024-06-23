@@ -19,7 +19,7 @@ func TestDarkCapture(t *testing.T) {
 	t.Run("capture dark frame ready on time", func(t *testing.T) {
 		//mockDelayService, service, mockDriver := setUpDarkCaptureTest(ctrl)
 		mockDelayService := goMockableDelay.NewMockDelayService(ctrl)
-		service := NewTheSkyService(mockDelayService)
+		service := NewTheSkyService(mockDelayService, false, 0)
 		// Plug mock driver into service
 		mockDriver := NewMockTheSkyDriver(ctrl)
 		service.SetDriver(mockDriver)
@@ -44,7 +44,7 @@ func TestDarkCapture(t *testing.T) {
 	t.Run("capture dark frame requiring two extra waits", func(t *testing.T) {
 		//mockDelayService, service, mockDriver := setUpDarkCaptureTest(ctrl)
 		mockDelayService := goMockableDelay.NewMockDelayService(ctrl)
-		service := NewTheSkyService(mockDelayService)
+		service := NewTheSkyService(mockDelayService, false, 0)
 		// Plug mock driver into service
 		mockDriver := NewMockTheSkyDriver(ctrl)
 		service.SetDriver(mockDriver)
@@ -72,8 +72,9 @@ func TestDarkCapture(t *testing.T) {
 	// then continue to wait and poll, only to eventually time out with no completion.
 	t.Run("capture dark frame times out while waiting", func(t *testing.T) {
 		//mockDelayService, service, mockDriver := setUpDarkCaptureTest(ctrl)
+
 		mockDelayService := goMockableDelay.NewMockDelayService(ctrl)
-		service := NewTheSkyService(mockDelayService)
+		service := NewTheSkyService(mockDelayService, false, 0)
 		// Plug mock driver into service
 		mockDriver := NewMockTheSkyDriver(ctrl)
 		service.SetDriver(mockDriver)
@@ -83,7 +84,7 @@ func TestDarkCapture(t *testing.T) {
 		const downloadTime = 5.0
 		//	The mock driver will be asked to initiate capture, and this will report success
 		mockDriver.EXPECT().StartDarkFrameCapture(1, seconds, downloadTime).Return(nil)
-		//	Initial delaypkg while waiting for exposure
+		//	Initial delay while waiting for exposure
 		initialDelay := int(math.Round(seconds + downloadTime + AndALittleExtra)) // from service
 		mockDelayService.EXPECT().DelayDuration(initialDelay).Return(initialDelay, nil)
 		//	Extra waits between polls
