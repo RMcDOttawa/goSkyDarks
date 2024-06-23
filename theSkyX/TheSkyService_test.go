@@ -1,9 +1,9 @@
 package theSkyX
 
 import (
+	"github.com/RMcDOttawa/goMockableDelay"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"goskydarks/delaypkg"
 	"math"
 	"testing"
 )
@@ -18,7 +18,7 @@ func TestDarkCapture(t *testing.T) {
 	// of time, and then see that the camera reports done
 	t.Run("capture dark frame ready on time", func(t *testing.T) {
 		//mockDelayService, service, mockDriver := setUpDarkCaptureTest(ctrl)
-		mockDelayService := delaypkg.NewMockDelayService(ctrl)
+		mockDelayService := goMockableDelay.NewMockDelayService(ctrl)
 		service := NewTheSkyService(mockDelayService)
 		// Plug mock driver into service
 		mockDriver := NewMockTheSkyDriver(ctrl)
@@ -43,7 +43,7 @@ func TestDarkCapture(t *testing.T) {
 	//then find it isn't finished. So we loop and poll two more times, then it is done.
 	t.Run("capture dark frame requiring two extra waits", func(t *testing.T) {
 		//mockDelayService, service, mockDriver := setUpDarkCaptureTest(ctrl)
-		mockDelayService := delaypkg.NewMockDelayService(ctrl)
+		mockDelayService := goMockableDelay.NewMockDelayService(ctrl)
 		service := NewTheSkyService(mockDelayService)
 		// Plug mock driver into service
 		mockDriver := NewMockTheSkyDriver(ctrl)
@@ -72,7 +72,7 @@ func TestDarkCapture(t *testing.T) {
 	// then continue to wait and poll, only to eventually time out with no completion.
 	t.Run("capture dark frame times out while waiting", func(t *testing.T) {
 		//mockDelayService, service, mockDriver := setUpDarkCaptureTest(ctrl)
-		mockDelayService := delaypkg.NewMockDelayService(ctrl)
+		mockDelayService := goMockableDelay.NewMockDelayService(ctrl)
 		service := NewTheSkyService(mockDelayService)
 		// Plug mock driver into service
 		mockDriver := NewMockTheSkyDriver(ctrl)

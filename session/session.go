@@ -3,9 +3,9 @@ package session
 import (
 	"errors"
 	"fmt"
+	"github.com/RMcDOttawa/goMockableDelay"
 	"github.com/spf13/viper"
 	"goskydarks/config"
-	"goskydarks/delaypkg"
 	"goskydarks/theSkyX"
 	"math"
 	"time"
@@ -14,7 +14,7 @@ import (
 // Session struct implements the session service, used for overall session control
 // such as start time or resuming from saved state
 type Session struct {
-	delayService     delaypkg.DelayService //	Used to delaypkg start; replace with mock for testing
+	delayService     goMockableDelay.DelayService //	Used to delaypkg start; replace with mock for testing
 	theSkyService    theSkyX.TheSkyService
 	stateFileService StateFileService
 	isConnected      bool
@@ -25,7 +25,7 @@ func NewSession() (*Session, error) {
 	if verbosity >= 2 {
 		fmt.Println("Creating a new Frame Capture session")
 	}
-	concreteDelayService := delaypkg.NewDelayService(viper.GetBool(config.DebugSetting), verbosity)
+	concreteDelayService := goMockableDelay.NewDelayService(viper.GetBool(config.DebugSetting), verbosity)
 	tsxService := theSkyX.NewTheSkyService(
 		concreteDelayService,
 	)
@@ -55,7 +55,7 @@ type CapturePlan struct {
 }
 
 // SetDelayService allows delaypkg service to be replaced with a mock for testing
-func (s *Session) SetDelayService(delayService delaypkg.DelayService) {
+func (s *Session) SetDelayService(delayService goMockableDelay.DelayService) {
 	s.delayService = delayService
 }
 

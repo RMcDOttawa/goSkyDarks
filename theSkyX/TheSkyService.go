@@ -3,9 +3,9 @@ package theSkyX
 import (
 	"errors"
 	"fmt"
+	"github.com/RMcDOttawa/goMockableDelay"
 	"github.com/spf13/viper"
 	"goskydarks/config"
-	"goskydarks/delaypkg"
 	"math"
 )
 
@@ -30,7 +30,7 @@ type TheSkyService interface {
 type TheSkyServiceInstance struct {
 	driver       TheSkyDriver
 	isOpen       bool
-	delayService delaypkg.DelayService
+	delayService goMockableDelay.DelayService
 }
 
 const minimumTimeoutForDark = 10.0 * 60.0
@@ -41,7 +41,7 @@ func (service *TheSkyServiceInstance) SetDriver(driver TheSkyDriver) {
 }
 
 // NewTheSkyService is the constructor for the instance of this service
-func NewTheSkyService(delayService delaypkg.DelayService) TheSkyService {
+func NewTheSkyService(delayService goMockableDelay.DelayService) TheSkyService {
 	service := &TheSkyServiceInstance{
 		isOpen:       false,
 		driver:       NewTheSkyDriver(),
