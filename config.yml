@@ -1,5 +1,5 @@
 ---
-verbosity:   2         # 0 (silent) to 5 (very chatty)                      # --verbosity  -v
+verbosity:   3         # 0 (silent) to 5 (very chatty)                      # --verbosity  -v
 debug: false                                                                # --debug
 stateFile:  "./stateFile"                                                   # --stateFile
 showSettings: false                                                         # --showSettings

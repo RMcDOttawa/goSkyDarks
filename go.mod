@@ -4,6 +4,7 @@ go 1.22
 
 require (
 	github.com/RMcDOttawa/goMockableDelay v1.1.2
+	github.com/RMcDOttawa/goTheSkyX v1.2.2
 	github.com/golang/mock v1.6.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.19.0
@@ -11,7 +12,6 @@ require (
 )
 
 require (
-	github.com/RMcDOttawa/goTheSkyX v1.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect

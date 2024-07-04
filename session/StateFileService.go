@@ -69,7 +69,7 @@ func (sfs *StateFileServiceInstance) SavePlanToFile(capturePlan *CapturePlan) er
 			len(jsonBytes), numWritten)
 	}
 
-	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) > 2 {
+	if viper.GetBool(config.DebugSetting) || viper.GetInt(config.VerbositySetting) >= 5 {
 		fmt.Println("SavePlanToFile exits")
 	}
 	return nil
